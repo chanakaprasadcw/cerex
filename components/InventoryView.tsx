@@ -1,6 +1,6 @@
-
-
 import React, { useState, useMemo } from 'react';
+// FIX: Add side-effect import to load global JSX type definitions.
+import {} from '../types';
 import type { InventoryItem } from '../types';
 import { InventoryCategory } from '../types';
 import { Card } from './common/Card';

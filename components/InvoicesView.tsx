@@ -1,7 +1,5 @@
-
-
 import React, { useState, useMemo } from 'react';
-// FIX: Add a side-effect import to ensure global JSX types are loaded.
+// FIX: Add a side-effect import to ensure global JSX type definitions are loaded.
 import {} from '../types';
 import type { PurchaseRecord, Project, User } from '../types';
 import { InventoryCategory, InvoiceStatus, UserRole } from '../types';
@@ -9,14 +7,32 @@ import { Card } from './common/Card';
 import { Input } from './common/Input';
 import { Button } from './common/Button';
 import { FileUpload } from './common/FileUpload';
+import { Modal } from './common/Modal';
+
+type InvoiceItemPayload = {
+  name: string;
+  quantity: number;
+  pricePerUnit: number;
+  category: InventoryCategory;
+  purchaseFor: 'General Inventory' | 'Project' | 'Expense';
+  costCenter: string;
+};
+
+type InvoiceSubmissionPayload = {
+  invoiceId: string;
+  supplier: string;
+  purchaseDate: string;
+  invoiceFile: File | null;
+  items: InvoiceItemPayload[];
+};
 
 interface InvoicesViewProps {
   purchaseRecords: PurchaseRecord[];
-  // FIX: Added 'category' to the record type to match the expected data structure.
-  addPurchaseRecord: (record: Omit<PurchaseRecord, 'id' | 'invoiceUrl' | 'inventoryItemId' | 'totalCost' | 'itemName' | 'status'> & { name: string; category: InventoryCategory; }) => void;
+  submitInvoice: (payload: InvoiceSubmissionPayload, user: User) => Promise<void>;
   projects: Project[];
   currentUser: User;
   updateInvoiceStatus: (invoiceId: string, status: InvoiceStatus, user: User) => void;
+  deleteInvoice: (invoiceId: string) => Promise<void>;
 }
 
 const getStatusChipClass = (status: InvoiceStatus) => {
@@ -40,7 +56,9 @@ const InvoiceDetailsModal: React.FC<{
     onClose: () => void,
     currentUser: User,
     updateInvoiceStatus: (invoiceId: string, status: InvoiceStatus, user: User) => void
-}> = ({ invoice, onClose, currentUser, updateInvoiceStatus }) => {
+    deleteInvoice: (invoiceId: string) => Promise<void>;
+}> = ({ invoice, onClose, currentUser, updateInvoiceStatus, deleteInvoice }) => {
+    const [showDeleteModal, setShowDeleteModal] = useState(false);
     const { records } = invoice;
     const firstRecord = records[0];
     const totalCost = records.reduce((sum, item) => sum + item.totalCost, 0);
@@ -59,56 +77,92 @@ const InvoiceDetailsModal: React.FC<{
         onClose();
     }
 
+    const confirmDelete = async () => {
+        await deleteInvoice(invoice.invoiceId);
+        setShowDeleteModal(false);
+        onClose();
+    }
+
     const canApprove = (currentUser.role === UserRole.CHECKER && firstRecord.status === InvoiceStatus.PENDING_REVIEW) ||
                        (currentUser.role === UserRole.AUTHORIZER && firstRecord.status === InvoiceStatus.PENDING_APPROVAL);
 
     const approveText = currentUser.role === UserRole.CHECKER ? "Submit for Approval" : "Approve Invoice";
 
     return (
-        <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 transition-opacity p-4">
-            <Card className="w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-                <div className="flex justify-between items-center mb-4">
-                    <h2 className="text-xl font-bold text-white">Invoice Details</h2>
-                    <Button onClick={onClose} variant="secondary" size="sm" iconName="close-outline" />
-                </div>
-                <div className="space-y-4">
-                    <div className="p-4 bg-gray-900/50 rounded-lg border border-gray-700 grid grid-cols-2 gap-4">
-                        <div><span className="text-gray-400">Supplier:</span><p className="font-semibold text-white">{firstRecord.supplier}</p></div>
-                        <div><span className="text-gray-400">Date:</span><p className="font-semibold text-white">{new Date(firstRecord.purchaseDate + 'T00:00:00').toLocaleDateString()}</p></div>
-                        <div><span className="text-gray-400">Cost Center:</span><p className="font-semibold text-white">{firstRecord.costCenter}</p></div>
-                         <div><span className="text-gray-400">Status:</span> <span className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusChipClass(firstRecord.status)}`}>{firstRecord.status}</span></div>
+        <>
+            {showDeleteModal && (
+                <Modal
+                    title="Confirm Deletion"
+                    message={`Are you sure you want to permanently delete invoice ${invoice.invoiceId}? This action will reverse any associated inventory changes and cannot be undone.`}
+                    onConfirm={confirmDelete}
+                    onCancel={() => setShowDeleteModal(false)}
+                    confirmText="Delete Invoice"
+                    variant="danger"
+                />
+            )}
+            <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 transition-opacity p-4">
+                <Card className="w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+                    <div className="flex justify-between items-center mb-4">
+                        <h2 className="text-xl font-bold text-white">Invoice Details</h2>
+                        <Button onClick={onClose} variant="secondary" size="sm" iconName="close-outline" />
                     </div>
-                    <div>
-                        <h3 className="font-medium text-white mb-2">Items</h3>
-                        <ul className="space-y-2">
-                           {records.map(item => (
-                               <li key={item.id} className="flex justify-between items-center bg-gray-800 p-3 rounded-md">
-                                   <div>
-                                       <p className="font-semibold text-white">{item.itemName}</p>
-                                       <p className="text-sm text-gray-400">{item.quantity} units @ ${item.pricePerUnit.toFixed(2)} each</p>
-                                   </div>
-                                   <span className="font-bold text-white">${item.totalCost.toFixed(2)}</span>
-                               </li>
-                           ))}
-                        </ul>
-                         <div className="mt-4 pt-4 border-t border-gray-700 flex justify-end">
-                            <p className="text-lg font-bold text-white">Total Cost: <span className="text-blue-400">${totalCost.toFixed(2)}</span></p>
+                    <div className="space-y-4">
+                        <div className="p-4 bg-gray-900/50 rounded-lg border border-gray-700 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div><span className="text-gray-400">Supplier:</span><p className="font-semibold text-white">{firstRecord.supplier}</p></div>
+                            <div><span className="text-gray-400">Date:</span><p className="font-semibold text-white">{new Date(firstRecord.purchaseDate + 'T00:00:00').toLocaleDateString()}</p></div>
+                            <div><span className="text-gray-400">Cost Center:</span><p className="font-semibold text-white">{firstRecord.costCenter}</p></div>
+                             <div>
+                                <span className="text-gray-400">Status:</span>
+                                <p><span className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusChipClass(firstRecord.status)}`}>{firstRecord.status}</span></p>
+                            </div>
+                            {firstRecord.checkedBy && (
+                                <div><span className="text-gray-400">Checked By:</span><p className="font-semibold text-white">{firstRecord.checkedBy}</p></div>
+                            )}
+                            {firstRecord.approvedBy && (
+                                <div><span className="text-gray-400">Approved By:</span><p className="font-semibold text-white">{firstRecord.approvedBy}</p></div>
+                            )}
+                        </div>
+                        <div>
+                            <h3 className="font-medium text-white mb-2">Items</h3>
+                            <ul className="space-y-2">
+                               {records.map(item => (
+                                   <li key={item.id} className="flex justify-between items-center bg-gray-800 p-3 rounded-md">
+                                       <div>
+                                           <p className="font-semibold text-white">{item.itemName}</p>
+                                           <p className="text-sm text-gray-400">{item.quantity} units @ ${item.pricePerUnit.toFixed(2)} each</p>
+                                       </div>
+                                       <span className="font-bold text-white">${item.totalCost.toFixed(2)}</span>
+                                   </li>
+                               ))}
+                            </ul>
+                             <div className="mt-4 pt-4 border-t border-gray-700 flex justify-end">
+                                <p className="text-lg font-bold text-white">Total Cost: <span className="text-blue-400">${totalCost.toFixed(2)}</span></p>
+                            </div>
+                        </div>
+                        <div className="mt-6 flex justify-between items-center border-t border-gray-700 pt-4">
+                            <div>
+                                {currentUser.role === UserRole.AUTHORIZER && (
+                                    <Button onClick={() => setShowDeleteModal(true)} variant="danger-outline" iconName="trash-outline">Delete Invoice</Button>
+                                )}
+                            </div>
+                            <div className="flex space-x-4">
+                                {canApprove && (
+                                    <>
+                                        <Button onClick={handleReject} variant="danger" iconName="close-circle-outline">Reject</Button>
+                                        <Button onClick={handleApprove} variant="primary" iconName="checkmark-circle-outline">{approveText}</Button>
+                                    </>
+                                )}
+                            </div>
                         </div>
                     </div>
-                     {canApprove && (
-                        <div className="mt-6 flex justify-end space-x-4 border-t border-gray-700 pt-4">
-                            <Button onClick={handleReject} variant="danger" iconName="close-circle-outline">Reject</Button>
-                            <Button onClick={handleApprove} variant="primary" iconName="checkmark-circle-outline">{approveText}</Button>
-                        </div>
-                     )}
-                </div>
-            </Card>
-        </div>
+                </Card>
+            </div>
+        </>
     );
 };
 
 
-export const InvoicesView: React.FC<InvoicesViewProps> = ({ purchaseRecords, addPurchaseRecord, projects, currentUser, updateInvoiceStatus }) => {
+export const InvoicesView: React.FC<InvoicesViewProps> = ({ purchaseRecords, submitInvoice, projects, currentUser, updateInvoiceStatus, deleteInvoice }) => {
   const [filter, setFilter] = useState({ startDate: '', endDate: '' });
   const [viewingInvoiceId, setViewingInvoiceId] = useState<string | null>(null);
 
@@ -119,6 +173,8 @@ export const InvoicesView: React.FC<InvoicesViewProps> = ({ purchaseRecords, add
   const [invoiceFile, setInvoiceFile] = useState<File | null>(null);
   const [invoiceDetailsLocked, setInvoiceDetailsLocked] = useState(false);
   const [invoiceId, setInvoiceId] = useState<string | null>(null);
+  
+  const [currentInvoiceItems, setCurrentInvoiceItems] = useState<InvoiceItemPayload[]>([]);
 
   const [itemDetails, setItemDetails] = useState({
     name: '',
@@ -169,42 +225,69 @@ export const InvoicesView: React.FC<InvoicesViewProps> = ({ purchaseRecords, add
     setInvoiceId(null);
     setInvoiceDetails({ supplier: '', purchaseDate: new Date().toISOString().split('T')[0] });
     setInvoiceFile(null);
+    setCurrentInvoiceItems([]);
     setItemDetails({ name: '', quantity: '', price: '', category: InventoryCategory.MISCELLANEOUS, purchaseFor: 'General Inventory', costCenter: '', projectSelection: '' });
     setFormKey(Date.now());
   };
-
+  
   const handleAddItem = (e: React.FormEvent) => {
     e.preventDefault();
     const quantity = parseInt(itemDetails.quantity, 10);
     const price = parseFloat(itemDetails.price);
 
-    if (itemDetails.name && !isNaN(quantity) && quantity > 0 && !isNaN(price) && price >= 0 && invoiceFile && invoiceId && itemDetails.costCenter) {
-      addPurchaseRecord({
-        invoiceId,
-        supplier: invoiceDetails.supplier,
-        purchaseDate: invoiceDetails.purchaseDate,
-        invoiceFile,
+    if (itemDetails.name && !isNaN(quantity) && quantity > 0 && !isNaN(price) && price >= 0 && itemDetails.costCenter) {
+      const newItem: InvoiceItemPayload = {
         name: itemDetails.name,
         quantity,
         pricePerUnit: price,
         category: itemDetails.category,
         purchaseFor: itemDetails.purchaseFor,
         costCenter: itemDetails.costCenter,
-      });
+      };
+      setCurrentInvoiceItems(prev => [...prev, newItem]);
+      // Clear only the fields for the next item entry for efficiency
       setItemDetails(prev => ({ ...prev, name: '', quantity: '', price: '' }));
     } else {
         alert("Please fill all item fields with valid data, including a cost center.");
     }
   };
 
+  const handleRemoveItem = (indexToRemove: number) => {
+    setCurrentInvoiceItems(prev => prev.filter((_, index) => index !== indexToRemove));
+  };
+  
+  const handleSubmitInvoice = async () => {
+    if (currentInvoiceItems.length === 0 || !invoiceId) {
+      alert("Please add at least one item before submitting.");
+      return;
+    }
+    try {
+      await submitInvoice({
+        invoiceId,
+        supplier: invoiceDetails.supplier,
+        purchaseDate: invoiceDetails.purchaseDate,
+        invoiceFile,
+        items: currentInvoiceItems,
+      }, currentUser);
+      alert("Invoice submitted successfully!");
+      handleStartNewInvoice();
+    } catch (error) {
+      console.error("Failed to submit invoice:", error);
+      alert("An error occurred while submitting the invoice. Please try again.");
+    }
+  };
+
+
   const groupedInvoices = useMemo(() => {
-    const invoices = purchaseRecords.reduce((acc, record) => {
+    const invoices = purchaseRecords.reduce<Record<string, PurchaseRecord[]>>((acc, record) => {
         if (!acc[record.invoiceId]) {
             acc[record.invoiceId] = [];
         }
-        acc[record.invoiceId].push(record);
+        // FIX: Create a plain copy of the record to prevent downstream circular reference issues.
+        acc[record.invoiceId].push({ ...record });
         return acc;
-    }, {} as Record<string, PurchaseRecord[]>);
+    // FIX: Explicitly typing the initial value of reduce ensures TypeScript correctly infers the accumulator type, preventing errors where properties on 'acc' could not be accessed.
+    }, {});
 
     let invoiceList = Object.values(invoices).map(records => {
         const firstRecord = records[0];
@@ -235,12 +318,12 @@ export const InvoicesView: React.FC<InvoicesViewProps> = ({ purchaseRecords, add
     }).sort((a,b) => new Date(b.purchaseDate).getTime() - new Date(a.purchaseDate).getTime());
 
   }, [purchaseRecords, filter]);
-
+  
   const viewingInvoice = viewingInvoiceId ? groupedInvoices.find(inv => inv.invoiceId === viewingInvoiceId) : null;
 
   return (
     <div className="space-y-8">
-      {viewingInvoice && <InvoiceDetailsModal invoice={viewingInvoice} onClose={() => setViewingInvoiceId(null)} currentUser={currentUser} updateInvoiceStatus={updateInvoiceStatus} />}
+      {viewingInvoice && <InvoiceDetailsModal invoice={viewingInvoice} onClose={() => setViewingInvoiceId(null)} currentUser={currentUser} updateInvoiceStatus={updateInvoiceStatus} deleteInvoice={deleteInvoice} />}
 
       <h1 className="text-3xl font-bold tracking-tight text-white">Invoices & Purchases</h1>
       
@@ -290,7 +373,7 @@ export const InvoicesView: React.FC<InvoicesViewProps> = ({ purchaseRecords, add
             <Card>
                 <div className="flex justify-between items-center mb-4">
                     <h2 className="text-xl font-semibold text-white">Record New Invoice</h2>
-                    {invoiceDetailsLocked && <Button onClick={handleStartNewInvoice} variant="secondary" size="sm" iconName="add-outline">New Invoice</Button>}
+                    <Button onClick={handleStartNewInvoice} variant="secondary" size="sm" iconName="refresh-outline">Start Over</Button>
                 </div>
                 
                 <fieldset disabled={invoiceDetailsLocked} className="space-y-4">
@@ -300,47 +383,77 @@ export const InvoicesView: React.FC<InvoicesViewProps> = ({ purchaseRecords, add
                     <FileUpload key={formKey} label="Invoice (PDF/Image)" onFileSelect={file => setInvoiceFile(file)} />
                 </fieldset>
 
-                {!invoiceDetailsLocked && <Button onClick={handleLockInvoice} variant="primary" className="w-full !mt-6" iconName="lock-closed-outline" disabled={!invoiceDetails.supplier || !invoiceDetails.purchaseDate || !invoiceFile}>Lock Invoice & Add Items</Button>}
+                {!invoiceDetailsLocked && <Button onClick={handleLockInvoice} variant="primary" className="w-full !mt-6" iconName="lock-closed-outline" disabled={!invoiceDetails.supplier || !invoiceDetails.purchaseDate || !invoiceFile}>Lock Details & Add Items</Button>}
 
                 {invoiceDetailsLocked && (
-                    <form onSubmit={handleAddItem} className="space-y-4 mt-6 border-t border-gray-700 pt-6">
-                        <h3 className="text-lg font-medium text-blue-400 mb-2">Add Item to Invoice</h3>
-                        <Input label="Item Name" name="name" value={itemDetails.name} onChange={handleItemDetailsChange} required />
-                        <div>
-                            <label className="block text-sm font-medium text-gray-300 mb-2">Purchase For</label>
-                            <select name="purchaseFor" value={itemDetails.purchaseFor} onChange={handleItemDetailsChange} className="w-full bg-gray-900 border border-gray-700 rounded-md p-3">
-                                <option value="General Inventory">General Inventory</option>
-                                <option value="Project">Project</option>
-                                <option value="Expense">Expense (No Inventory)</option>
-                            </select>
-                        </div>
-                        {itemDetails.purchaseFor === 'Project' ? (
+                    <>
+                        <form onSubmit={handleAddItem} className="space-y-4 mt-6 border-t border-gray-700 pt-6">
+                            <h3 className="text-lg font-medium text-blue-400 mb-2">Add Item to Invoice</h3>
+                            <Input label="Item Name" name="name" value={itemDetails.name} onChange={handleItemDetailsChange} required />
                             <div>
-                                <label className="block text-sm font-medium text-gray-300 mb-2">Project</label>
-                                <select name="projectSelection" value={itemDetails.projectSelection} onChange={handleItemDetailsChange} className="w-full bg-gray-900 border border-gray-700 rounded-md p-3" required>
-                                    <option value="">Select a Project</option>
-                                    {projects.map(p => <option key={p.id} value={p.id}>{p.name} ({p.costCenter})</option>)}
+                                <label className="block text-sm font-medium text-gray-300 mb-2">Purchase For</label>
+                                <select name="purchaseFor" value={itemDetails.purchaseFor} onChange={handleItemDetailsChange} className="w-full bg-gray-900 border border-gray-700 rounded-md p-3">
+                                    <option value="General Inventory">General Inventory</option>
+                                    <option value="Project">Project</option>
+                                    <option value="Expense">Expense (No Inventory)</option>
                                 </select>
                             </div>
-                        ) : (
-                            <Input label="Cost Center" name="costCenter" value={itemDetails.costCenter} onChange={handleItemDetailsChange} required />
-                        )}
-                        {itemDetails.purchaseFor !== 'Expense' && (
-                            <>
+                            {itemDetails.purchaseFor === 'Project' ? (
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-300 mb-2">Category</label>
-                                    <select name="category" value={itemDetails.category} onChange={handleItemDetailsChange} className="w-full bg-gray-900 border border-gray-700 rounded-md p-3">
-                                        {Object.values(InventoryCategory).map(cat => <option key={cat} value={cat}>{cat}</option>)}
+                                    <label className="block text-sm font-medium text-gray-300 mb-2">Project</label>
+                                    <select name="projectSelection" value={itemDetails.projectSelection} onChange={handleItemDetailsChange} className="w-full bg-gray-900 border border-gray-700 rounded-md p-3" required>
+                                        <option value="">Select a Project</option>
+                                        {projects.map(p => <option key={p.id} value={p.id}>{p.name} ({p.costCenter})</option>)}
                                     </select>
                                 </div>
-                                <div className="grid grid-cols-2 gap-4">
-                                    <Input label="Quantity" name="quantity" type="number" value={itemDetails.quantity} onChange={handleItemDetailsChange} required />
-                                    <Input label="Price per unit" name="price" type="number" step="0.01" value={itemDetails.price} onChange={handleItemDetailsChange} required />
+                            ) : (
+                                <Input label="Cost Center" name="costCenter" value={itemDetails.costCenter} onChange={handleItemDetailsChange} required />
+                            )}
+                            {itemDetails.purchaseFor !== 'Expense' && (
+                                <>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-300 mb-2">Category</label>
+                                        <select name="category" value={itemDetails.category} onChange={handleItemDetailsChange} className="w-full bg-gray-900 border border-gray-700 rounded-md p-3">
+                                            {Object.values(InventoryCategory).map(cat => <option key={cat} value={cat}>{cat}</option>)}
+                                        </select>
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <Input label="Quantity" name="quantity" type="number" min="1" value={itemDetails.quantity} onChange={handleItemDetailsChange} required />
+                                        <Input label="Price per unit" name="price" type="number" step="0.01" min="0" value={itemDetails.price} onChange={handleItemDetailsChange} required />
+                                    </div>
+                                </>
+                            )}
+                            <Button type="submit" variant="secondary" className="w-full !mt-6" iconName="add-circle-outline">Add Item</Button>
+                        </form>
+
+                        {currentInvoiceItems.length > 0 && (
+                            <div className="mt-6 border-t border-gray-700 pt-6">
+                                <h3 className="text-lg font-medium text-blue-400 mb-2">
+                                    Items to be Submitted
+                                </h3>
+                                <ul className="space-y-2 max-h-48 overflow-y-auto p-1">
+                                    {currentInvoiceItems.map((item, index) => (
+                                        <li key={index} className="flex justify-between items-center bg-gray-800 p-3 rounded-md">
+                                            <div>
+                                                <p className="font-semibold text-white">{item.name}</p>
+                                                <p className="text-sm text-gray-400">{item.quantity} units @ ${item.pricePerUnit.toFixed(2)} each</p>
+                                            </div>
+                                            <div className="flex items-center space-x-2">
+                                                <span className="font-bold text-white">${(item.quantity * item.pricePerUnit).toFixed(2)}</span>
+                                                <Button onClick={() => handleRemoveItem(index)} variant="danger-outline" size="sm" iconName="trash-outline" />
+                                            </div>
+                                        </li>
+                                    ))}
+                                </ul>
+                                <div className="mt-4 pt-4 border-t border-gray-700 flex flex-col items-end space-y-4">
+                                    <p className="text-lg font-bold text-white">
+                                        Total: <span className="text-blue-400">${currentInvoiceItems.reduce((sum, item) => sum + (item.quantity * item.pricePerUnit), 0).toFixed(2)}</span>
+                                    </p>
+                                    <Button onClick={handleSubmitInvoice} variant="primary" iconName="send-outline">Submit Invoice</Button>
                                 </div>
-                            </>
+                            </div>
                         )}
-                        <Button type="submit" variant="secondary" className="w-full !mt-6" iconName="add-circle-outline">Add Item</Button>
-                    </form>
+                    </>
                 )}
             </Card>
         </div>

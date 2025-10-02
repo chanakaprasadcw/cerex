@@ -1,5 +1,6 @@
-
 import React from 'react';
+// FIX: Add side-effect import to load global JSX type definitions.
+import {} from '../types';
 // Changed to a value import for `Page` to allow access to enum members.
 import { Page, UserRole, type User } from '../types';
 
@@ -32,6 +33,12 @@ export const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogou
               <NavLink onClick={() => onNavigate(Page.DASHBOARD)}>Dashboard</NavLink>
               <NavLink onClick={() => onNavigate(Page.INVENTORY)}>Inventory</NavLink>
               <NavLink onClick={() => onNavigate(Page.INVOICES)}>Invoices</NavLink>
+              {currentUser.role === UserRole.AUTHORIZER && (
+                <>
+                  <NavLink onClick={() => onNavigate(Page.USER_CONTROL)}>User Control</NavLink>
+                  <NavLink onClick={() => onNavigate(Page.ACTIVITY_LOG)}>Activity Log</NavLink>
+                </>
+              )}
             </nav>
           </div>
           <div className="flex items-center space-x-4">

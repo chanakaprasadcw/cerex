@@ -1,6 +1,8 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
+// FIX: Import 'types.ts' for side effects to ensure global type definitions are available.
+import './types';
 
 const rootElement = document.getElementById('root');
 if (!rootElement) {

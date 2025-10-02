@@ -1,9 +1,7 @@
-
-
+// FIX: Import React before any local type augmentations to ensure global JSX types are loaded correctly.
+import React, { useState, useCallback } from 'react';
 // FIX: Add a side-effect import to ensure global types are loaded.
 import {} from './types';
-// FIX: Corrected the React import statement.
-import React, { useState, useCallback } from 'react';
 import { Header } from './components/Header';
 import { Dashboard } from './components/Dashboard';
 import { InventoryView } from './components/InventoryView';
@@ -11,40 +9,44 @@ import { NewProjectView } from './components/NewProjectView';
 import { ProjectDetailsView } from './components/ProjectDetailsView';
 import { LoginView } from './components/LoginView';
 import { InvoicesView } from './components/InvoicesView';
+import { UserControlView } from './components/UserControlView';
+import { ActivityLogView } from './components/ActivityLogView';
+import { Chatbot } from './components/Chatbot';
 import { EmailNotificationModal } from './components/common/EmailNotificationModal';
+import { Spinner } from './components/common/Spinner';
 import { useProjectData } from './hooks/useProjectData';
+import { useAuth } from './hooks/useAuth';
 import type { Project, User } from './types';
 import { Page, UserRole, ProjectStatus } from './types';
-
-const LOGGER_USER: User = { username: 'Logger User', role: UserRole.LOGGER };
-const CHECKER_USER: User = { username: 'Checker User', role: UserRole.CHECKER };
-const AUTHORIZER_USER: User = { username: 'Authorizer User', role: UserRole.AUTHORIZER };
 
 const App: React.FC = () => {
   const [currentPage, setCurrentPage] = useState<Page>(Page.DASHBOARD);
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [projectForEmail, setProjectForEmail] = useState<Project | null>(null);
   const [editingProject, setEditingProject] = useState<Project | null>(null);
   const [cloningProject, setCloningProject] = useState<Project | null>(null);
+  const [isChatbotOpen, setIsChatbotOpen] = useState(false);
+
+  const { currentUser, loading, logOut, signIn, signUp, resetPassword } = useAuth();
 
   const {
     projects,
     inventory,
     teamMembers,
     purchaseRecords,
+    users,
+    activityLog,
     addProject,
     updateProject,
     updateProjectStatus,
-    addPurchaseRecord,
+    submitInvoice,
     updateInvoiceStatus,
     deductInventory,
-  } = useProjectData();
-
-  const handleLogin = (user: User) => {
-    setCurrentUser(user);
-  };
+    deleteProject,
+    deleteInvoice,
+    updateUserRole,
+  } = useProjectData(currentUser);
 
   const navigate = (page: Page) => {
     if (successMessage) {
@@ -59,8 +61,8 @@ const App: React.FC = () => {
     setCurrentPage(page);
   };
 
-  const handleLogout = () => {
-    setCurrentUser(null);
+  const handleLogout = async () => {
+    await logOut();
     navigate(Page.DASHBOARD);
   };
 
@@ -99,7 +101,9 @@ const App: React.FC = () => {
   };
 
   const handleSendEmailNotification = () => {
-    if (projectForEmail) {
+    if (projectForEmail && currentUser) {
+      // FIX: The status update is now correctly tied to the final confirmation action.
+      updateProjectStatus(projectForEmail.id, ProjectStatus.PENDING_APPROVAL, currentUser);
       setSuccessMessage(`Project "${projectForEmail.name}" has been sent for final approval.`);
       setProjectForEmail(null);
       navigate(Page.DASHBOARD);
@@ -112,11 +116,11 @@ const App: React.FC = () => {
 
   const handleSubmitForApproval = useCallback((projectId: string) => {
     const project = projects.find(p => p.id === projectId);
+    // FIX: Only set the project to open the modal. The status update will happen upon confirmation.
     if (project && currentUser?.role === UserRole.CHECKER) {
-      updateProjectStatus(projectId, ProjectStatus.PENDING_APPROVAL, currentUser);
       setProjectForEmail(project);
     }
-  }, [projects, updateProjectStatus, currentUser]);
+  }, [projects, currentUser]);
   
   const handleApproveProject = useCallback((projectId: string) => {
     const project = projects.find(p => p.id === projectId);
@@ -136,7 +140,20 @@ const App: React.FC = () => {
     }
   }, [updateProjectStatus, currentUser]);
 
+  const handleDeleteProject = useCallback(async (projectId: string) => {
+    const projectToDelete = projects.find(p => p.id === projectId);
+    if (projectToDelete) {
+        await deleteProject(projectId);
+        setSuccessMessage(`Project "${projectToDelete.name}" has been deleted.`);
+        if (currentPage === Page.PROJECT_DETAILS) {
+            navigate(Page.DASHBOARD);
+        }
+    }
+  }, [projects, deleteProject, currentPage]);
+
   const renderContent = () => {
+    if (!currentUser) return null; // Should be handled by the main return, but good for type safety
+
     switch (currentPage) {
       case Page.DASHBOARD:
         return (
@@ -147,7 +164,8 @@ const App: React.FC = () => {
               onViewProject={handleViewProject}
               onEditProject={handleEditProject}
               onCloneProject={handleCloneProject}
-              currentUser={currentUser!}
+              onDeleteProject={handleDeleteProject}
+              currentUser={currentUser}
               successMessage={successMessage}
               onDismissSuccessMessage={() => setSuccessMessage(null)}
             />
@@ -155,7 +173,7 @@ const App: React.FC = () => {
       case Page.INVENTORY:
         return <InventoryView inventory={inventory} />;
       case Page.INVOICES:
-        return <InvoicesView purchaseRecords={purchaseRecords} addPurchaseRecord={addPurchaseRecord} projects={projects} currentUser={currentUser!} updateInvoiceStatus={updateInvoiceStatus} />;
+        return <InvoicesView purchaseRecords={purchaseRecords} submitInvoice={submitInvoice} projects={projects} currentUser={currentUser} updateInvoiceStatus={updateInvoiceStatus} deleteInvoice={deleteInvoice} />;
       case Page.NEW_PROJECT:
         return (
           <NewProjectView
@@ -169,7 +187,7 @@ const App: React.FC = () => {
                 setCloningProject(null);
                 navigate(Page.DASHBOARD);
             }}
-            currentUser={currentUser!}
+            currentUser={currentUser}
           />
         );
       case Page.PROJECT_DETAILS:
@@ -181,26 +199,38 @@ const App: React.FC = () => {
               onApprove={handleApproveProject}
               onReject={handleRejectProject}
               onSubmitForApproval={handleSubmitForApproval}
+              onDeleteProject={handleDeleteProject}
               onBack={() => navigate(Page.DASHBOARD)}
               onEdit={handleEditProject}
               onClone={handleCloneProject}
-              currentUser={currentUser!}
+              currentUser={currentUser}
             />
           );
         }
-        return <Dashboard projects={projects} purchaseRecords={purchaseRecords} onNavigate={navigate} onViewProject={handleViewProject} onEditProject={handleEditProject} onCloneProject={handleCloneProject} currentUser={currentUser!} successMessage={null} onDismissSuccessMessage={() => {}} />; // Fallback
+        return <Dashboard projects={projects} purchaseRecords={purchaseRecords} onNavigate={navigate} onViewProject={handleViewProject} onEditProject={handleEditProject} onCloneProject={handleCloneProject} onDeleteProject={handleDeleteProject} currentUser={currentUser} successMessage={null} onDismissSuccessMessage={() => {}} />; // Fallback
+      case Page.USER_CONTROL:
+        return <UserControlView users={users} currentUser={currentUser} updateUserRole={updateUserRole} activityLog={activityLog} />;
+      case Page.ACTIVITY_LOG:
+        return <ActivityLogView activityLog={activityLog} />;
       default:
-        return <Dashboard projects={projects} purchaseRecords={purchaseRecords} onNavigate={navigate} onViewProject={handleViewProject} onEditProject={handleEditProject} onCloneProject={handleCloneProject} currentUser={currentUser!} successMessage={null} onDismissSuccessMessage={() => {}} />;
+        return <Dashboard projects={projects} purchaseRecords={purchaseRecords} onNavigate={navigate} onViewProject={handleViewProject} onEditProject={handleEditProject} onCloneProject={handleCloneProject} onDeleteProject={handleDeleteProject} currentUser={currentUser} successMessage={null} onDismissSuccessMessage={() => {}} />;
     }
   };
+  
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-900 flex items-center justify-center">
+        <Spinner />
+      </div>
+    );
+  }
   
   if (!currentUser) {
     return (
         <LoginView 
-            onLogin={handleLogin}
-            loggerUser={LOGGER_USER}
-            checkerUser={CHECKER_USER}
-            authorizerUser={AUTHORIZER_USER}
+            onSignIn={signIn}
+            onSignUp={signUp}
+            onResetPassword={resetPassword}
         />
     );
   }
@@ -220,6 +250,18 @@ const App: React.FC = () => {
             {renderContent()}
         </main>
       </div>
+       {isChatbotOpen && <Chatbot onClose={() => setIsChatbotOpen(false)} />}
+      
+      <button
+        onClick={() => setIsChatbotOpen(prev => !prev)}
+        title={isChatbotOpen ? "Close Chat" : "Open AI Assistant"}
+        className="fixed bottom-4 right-4 sm:right-6 lg:right-8 z-50 w-14 h-14 bg-blue-600 text-white rounded-full shadow-lg flex items-center justify-center hover:bg-blue-700 transition-all duration-300 transform hover:scale-110 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-900 focus:ring-blue-500"
+        aria-label="Toggle AI Assistant"
+      >
+        {/* FIX: Changed 'class' to 'className' for consistency with React. */}
+        <ion-icon name={isChatbotOpen ? "close-outline" : "sparkles-outline"} className="text-3xl"></ion-icon>
+      </button>
+
       {projectForEmail && (
         <EmailNotificationModal 
           project={projectForEmail}

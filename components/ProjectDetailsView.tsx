@@ -1,4 +1,6 @@
 import React from 'react';
+// FIX: Add side-effect import to load global JSX type definitions.
+import {} from '../types';
 import type { Project, User } from '../types';
 import { ProjectStatus, UserRole } from '../types';
 import { Card } from './common/Card';
@@ -11,6 +13,7 @@ interface ProjectDetailsViewProps {
   onApprove: (projectId: string) => void;
   onReject: (projectId: string) => void;
   onSubmitForApproval: (projectId: string) => void;
+  onDeleteProject: (projectId: string) => void;
   onBack: () => void;
   onEdit: (projectId: string) => void;
   onClone: (projectId: string) => void;
@@ -35,11 +38,22 @@ const getStatusChipClass = (status: ProjectStatus) => {
   }
 };
 
-export const ProjectDetailsView: React.FC<ProjectDetailsViewProps> = ({ project, onApprove, onReject, onSubmitForApproval, onBack, onEdit, onClone, currentUser }) => {
+export const ProjectDetailsView: React.FC<ProjectDetailsViewProps> = ({ project, onApprove, onReject, onSubmitForApproval, onDeleteProject, onBack, onEdit, onClone, currentUser }) => {
   const [showApproveModal, setShowApproveModal] = React.useState(false);
   const [showRejectModal, setShowRejectModal] = React.useState(false);
+  const [showDeleteModal, setShowDeleteModal] = React.useState(false);
   
   const totalCost = project.bom.reduce((acc, item) => acc + item.price * item.quantityNeeded, 0);
+
+  const canDelete = (project: Project, user: User): boolean => {
+    if (user.role === UserRole.CHECKER && project.status === ProjectStatus.PENDING_REVIEW) {
+        return true;
+    }
+    if (user.role === UserRole.AUTHORIZER && (project.status === ProjectStatus.PENDING_REVIEW || project.status === ProjectStatus.PENDING_APPROVAL || project.status === ProjectStatus.REJECTED)) {
+        return true;
+    }
+    return false;
+  };
 
   const confirmApprove = () => {
     onApprove(project.id);
@@ -49,6 +63,11 @@ export const ProjectDetailsView: React.FC<ProjectDetailsViewProps> = ({ project,
   const confirmReject = () => {
     onReject(project.id);
     setShowRejectModal(false);
+  }
+  
+  const confirmDelete = () => {
+    onDeleteProject(project.id);
+    setShowDeleteModal(false);
   }
 
   const handleFileDownload = (file: File | null | undefined) => {
@@ -67,13 +86,17 @@ export const ProjectDetailsView: React.FC<ProjectDetailsViewProps> = ({ project,
     <div className="max-w-5xl mx-auto">
         {showApproveModal && <Modal title="Confirm Approval" message="Approving this project will deduct items from inventory. This action cannot be undone." onConfirm={confirmApprove} onCancel={() => setShowApproveModal(false)} confirmText="Approve" />}
         {showRejectModal && <Modal title="Confirm Rejection" message="Are you sure you want to reject this project?" onConfirm={confirmReject} onCancel={() => setShowRejectModal(false)} confirmText="Reject" variant="danger" />}
+        {showDeleteModal && <Modal title="Confirm Deletion" message={`Are you sure you want to permanently delete the project "${project.name}"? This action cannot be undone.`} onConfirm={confirmDelete} onCancel={() => setShowDeleteModal(false)} confirmText="Delete Project" variant="danger" />}
       
       <div className="flex justify-between items-start mb-6">
         <div>
-            <div className="flex items-center space-x-2 mb-4">
-                <Button onClick={onBack} variant="secondary" iconName="arrow-back-outline">Back to Dashboard</Button>
-                <Button onClick={() => onEdit(project.id)} variant="secondary" iconName="pencil-outline">Edit Project</Button>
-                <Button onClick={() => onClone(project.id)} variant="secondary" iconName="copy-outline">Clone Project</Button>
+            <div className="flex flex-wrap items-center gap-2 mb-4">
+                <Button onClick={onBack} variant="secondary" iconName="arrow-back-outline">Back</Button>
+                <Button onClick={() => onEdit(project.id)} variant="secondary" iconName="pencil-outline">Edit</Button>
+                <Button onClick={() => onClone(project.id)} variant="secondary" iconName="copy-outline">Clone</Button>
+                {canDelete(project, currentUser) && (
+                    <Button onClick={() => setShowDeleteModal(true)} variant="danger-outline" iconName="trash-outline">Delete Project</Button>
+                )}
             </div>
             <h1 className="text-3xl font-bold tracking-tight text-white">{project.name}</h1>
             <p className="text-gray-400 mt-1">{project.costCenter}</p>

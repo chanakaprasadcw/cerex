@@ -1,4 +1,5 @@
-// FIX: Changed to a namespace import to correctly augment the global JSX namespace.
+// FIX: Using a standard import for React to ensure its global JSX types are loaded correctly before augmentation. A type-only import can lead to incomplete JSX definitions.
+// FIX: Changed React import to a namespace import to support different module interop settings which can affect JSX namespace augmentation.
 import * as React from 'react';
 
 export enum ProjectStatus {
@@ -24,6 +25,8 @@ export enum UserRole {
 }
 
 export interface User {
+  uid: string;
+  email: string;
   username: string;
   role: UserRole;
 }
@@ -101,12 +104,13 @@ export interface PurchaseRecord {
   quantity: number;
   pricePerUnit: number;
   totalCost: number;
-  invoiceFile: File;
-  invoiceUrl: string;
+  invoiceFile?: File;
+  invoiceUrl?: string;
   purchaseFor: 'General Inventory' | 'Project' | 'Expense';
   costCenter: string;
   status: InvoiceStatus;
   checkedBy?: string;
+  approvedBy?: string;
 }
 
 export enum Page {
@@ -115,16 +119,41 @@ export enum Page {
   INVOICES = 'INVOICES',
   NEW_PROJECT = 'NEW_PROJECT',
   PROJECT_DETAILS = 'PROJECT_DETAILS',
+  USER_CONTROL = 'USER_CONTROL',
+  ACTIVITY_LOG = 'ACTIVITY_LOG',
 }
+
+export enum ActivityAction {
+    USER_REGISTERED = 'User Registered',
+    USER_LOGIN = 'User Logged In',
+    USER_LOGOUT = 'User Logged Out',
+    USER_ROLE_CHANGED = 'User Role Changed',
+    PROJECT_CREATED = 'Project Created',
+    PROJECT_UPDATED = 'Project Updated',
+    PROJECT_STATUS_CHANGED = 'Project Status Changed',
+    PROJECT_DELETED = 'Project Deleted',
+    INVOICE_CREATED = 'Invoice Created',
+    INVOICE_STATUS_CHANGED = 'Invoice Status Changed',
+    INVOICE_DELETED = 'Invoice Deleted',
+}
+
+export interface ActivityLogEntry {
+    id: string;
+    timestamp: string;
+    userId: string;
+    username: string;
+    action: ActivityAction;
+    details: { [key: string]: any };
+}
+
 
 // Add global type definition for ion-icon to be recognized by TypeScript/JSX
 declare global {
   namespace JSX {
     interface IntrinsicElements {
-      // FIX: Used React.HTMLAttributes to be explicit after changing the import style.
-      'ion-icon': React.HTMLAttributes<HTMLElement> & {
-        name: string;
-      };
+      // FIX: Restored the more explicit 'React.DetailedHTMLProps' type for the custom 'ion-icon' element.
+      // The simpler 'React.HTMLAttributes' was insufficient, causing TypeScript to not recognize the element.
+      'ion-icon': React.DetailedHTMLProps<React.HTMLAttributes<HTMLElement> & { name: string }, HTMLElement>;
     }
   }
 }

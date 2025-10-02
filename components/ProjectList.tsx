@@ -1,8 +1,10 @@
 
 
 import React from 'react';
-import type { Project } from '../types';
-import { ProjectStatus } from '../types';
+// FIX: Add a side-effect import to ensure global JSX type definitions are loaded.
+import {} from '../types';
+import type { Project, User } from '../types';
+import { ProjectStatus, UserRole } from '../types';
 import { Button } from './common/Button';
 
 interface ProjectListProps {
@@ -10,6 +12,8 @@ interface ProjectListProps {
   onViewProject: (projectId: string) => void;
   onEditProject: (projectId: string) => void;
   onCloneProject: (projectId: string) => void;
+  onDeleteProject: (projectId: string) => void;
+  currentUser: User;
 }
 
 const getStatusChipClass = (status: ProjectStatus) => {
@@ -30,10 +34,20 @@ const getStatusChipClass = (status: ProjectStatus) => {
   }
 };
 
-export const ProjectList: React.FC<ProjectListProps> = ({ projects, onViewProject, onEditProject, onCloneProject }) => {
+export const ProjectList: React.FC<ProjectListProps> = ({ projects, onViewProject, onEditProject, onCloneProject, onDeleteProject, currentUser }) => {
   if (projects.length === 0) {
     return <div className="text-center py-10 text-gray-500">No projects found.</div>;
   }
+  
+  const canDelete = (project: Project, user: User): boolean => {
+    if (user.role === UserRole.CHECKER && project.status === ProjectStatus.PENDING_REVIEW) {
+        return true;
+    }
+    if (user.role === UserRole.AUTHORIZER && (project.status === ProjectStatus.PENDING_REVIEW || project.status === ProjectStatus.PENDING_APPROVAL || project.status === ProjectStatus.REJECTED)) {
+        return true;
+    }
+    return false;
+  };
 
   return (
     <div className="overflow-x-auto">
@@ -60,16 +74,29 @@ export const ProjectList: React.FC<ProjectListProps> = ({ projects, onViewProjec
               </td>
               <td className="px-6 py-4">{new Date(project.submissionDate).toLocaleDateString()}</td>
               <td className="px-6 py-4 font-mono">${project.bom.reduce((acc, item) => acc + item.price * item.quantityNeeded, 0).toFixed(2)}</td>
-              <td className="px-6 py-4 text-right space-x-2">
-                <Button onClick={() => onCloneProject(project.id)} variant="secondary" size="sm">
-                  Clone
+              <td className="px-6 py-4 text-right space-x-2 whitespace-nowrap">
+                <Button onClick={() => onViewProject(project.id)} variant="secondary" size="sm">
+                  View
                 </Button>
                 <Button onClick={() => onEditProject(project.id)} variant="secondary" size="sm">
                   Edit
                 </Button>
-                <Button onClick={() => onViewProject(project.id)} variant="secondary" size="sm">
-                  View Details
+                <Button onClick={() => onCloneProject(project.id)} variant="secondary" size="sm">
+                  Clone
                 </Button>
+                {canDelete(project, currentUser) && (
+                    <Button 
+                        onClick={() => {
+                            if (window.confirm(`Are you sure you want to delete "${project.name}"? This action cannot be undone.`)) {
+                                onDeleteProject(project.id);
+                            }
+                        }}
+                        variant="danger-outline" 
+                        size="sm"
+                    >
+                        Delete
+                    </Button>
+                )}
               </td>
             </tr>
           ))}

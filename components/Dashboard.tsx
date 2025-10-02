@@ -1,4 +1,6 @@
 import React, { useEffect } from 'react';
+// FIX: Add side-effect import to load global JSX type definitions.
+import {} from '../types';
 import type { Project, User, PurchaseRecord } from '../types';
 import { Page, ProjectStatus, UserRole, InvoiceStatus } from '../types';
 import { ProjectList } from './ProjectList';
@@ -12,12 +14,13 @@ interface DashboardProps {
   onViewProject: (projectId: string) => void;
   onEditProject: (projectId: string) => void;
   onCloneProject: (projectId: string) => void;
+  onDeleteProject: (projectId: string) => void;
   currentUser: User;
   successMessage: string | null;
   onDismissSuccessMessage: () => void;
 }
 
-export const Dashboard: React.FC<DashboardProps> = ({ projects, purchaseRecords, onNavigate, onViewProject, onEditProject, onCloneProject, currentUser, successMessage, onDismissSuccessMessage }) => {
+export const Dashboard: React.FC<DashboardProps> = ({ projects, purchaseRecords, onNavigate, onViewProject, onEditProject, onCloneProject, onDeleteProject, currentUser, successMessage, onDismissSuccessMessage }) => {
   useEffect(() => {
     if (successMessage) {
       const timer = setTimeout(() => {
@@ -37,11 +40,11 @@ export const Dashboard: React.FC<DashboardProps> = ({ projects, purchaseRecords,
   const pendingReviewInvoices = new Set(purchaseRecords.filter(p => p.status === InvoiceStatus.PENDING_REVIEW).map(p => p.invoiceId)).size;
   const pendingApprovalInvoices = new Set(purchaseRecords.filter(p => p.status === InvoiceStatus.PENDING_APPROVAL).map(p => p.invoiceId)).size;
   
-  // FIX: Explicitly typed the accumulator in the reduce function to prevent properties from being read on 'unknown' type.
+  // FIX: Explicitly typed the initial value in the reduce function to prevent properties from being read on 'unknown' type.
   const invoicesAwaitingReview = Object.values(
     purchaseRecords
       .filter(p => p.status === InvoiceStatus.PENDING_REVIEW)
-      .reduce((acc: Record<string, { invoiceId: string; supplier: string; purchaseDate: string; totalCost: number }>, record) => {
+      .reduce<Record<string, { invoiceId: string; supplier: string; purchaseDate: string; totalCost: number }>>((acc, record) => {
         if (!acc[record.invoiceId]) {
           acc[record.invoiceId] = { 
               invoiceId: record.invoiceId,
@@ -55,11 +58,11 @@ export const Dashboard: React.FC<DashboardProps> = ({ projects, purchaseRecords,
       }, {})
   );
 
-  // FIX: Explicitly typed the accumulator in the reduce function to prevent properties from being read on 'unknown' type.
+  // FIX: Explicitly typed the initial value in the reduce function to prevent properties from being read on 'unknown' type.
   const invoicesAwaitingApproval = Object.values(
     purchaseRecords
       .filter(p => p.status === InvoiceStatus.PENDING_APPROVAL)
-      .reduce((acc: Record<string, { invoiceId: string; supplier: string; purchaseDate: string; checkedBy?: string, totalCost: number }>, record) => {
+      .reduce<Record<string, { invoiceId: string; supplier: string; purchaseDate: string; checkedBy?: string, totalCost: number }>>((acc, record) => {
         if (!acc[record.invoiceId]) {
           acc[record.invoiceId] = { 
               invoiceId: record.invoiceId,
@@ -287,7 +290,14 @@ export const Dashboard: React.FC<DashboardProps> = ({ projects, purchaseRecords,
             </Button>
           )}
         </div>
-        <ProjectList projects={projects} onViewProject={onViewProject} onEditProject={onEditProject} onCloneProject={onCloneProject} />
+        <ProjectList 
+            projects={projects} 
+            onViewProject={onViewProject} 
+            onEditProject={onEditProject} 
+            onCloneProject={onCloneProject}
+            onDeleteProject={onDeleteProject}
+            currentUser={currentUser} 
+        />
       </Card>
     </div>
   );

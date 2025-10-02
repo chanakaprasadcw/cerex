@@ -1,7 +1,6 @@
-
-
-
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
+// FIX: Add side-effect import to load global JSX type definitions.
+import {} from '../types';
 import type { Project, InventoryItem, TeamMember, BomItem, TimelineMilestone, User } from '../types';
 import { ProjectStatus } from '../types';
 import { generateProjectSummary } from '../services/geminiService';
@@ -29,21 +28,75 @@ const STEPS = [
   'Review & Submit',
 ];
 
+// FIX: This function performs a deep sanitization to create a clean, plain JS object,
+// stripping all of Firestore's internal properties and methods. This is crucial for
+// preventing "circular structure" errors when editing or cloning.
+const sanitizeProject = (p: Project | null): Partial<Project> => {
+    if (!p) return {};
+    
+    // Explicitly create a new plain object to avoid any prototype chain issues or non-enumerable properties from Firestore objects.
+    const cleanProject: Partial<Project> = {
+        id: p.id,
+        name: p.name,
+        costCenter: p.costCenter,
+        details: p.details,
+        status: p.status,
+        submittedBy: p.submittedBy,
+        submissionDate: p.submissionDate,
+        checkedBy: p.checkedBy,
+        approvedBy: p.approvedBy,
+        bom: p.bom ? p.bom.map(item => ({
+            inventoryItemId: item.inventoryItemId,
+            name: item.name,
+            quantityNeeded: item.quantityNeeded,
+            price: item.price,
+            source: item.source,
+        })) : [],
+        timeline: p.timeline ? p.timeline.map(item => ({
+            id: item.id,
+            name: item.name,
+            startDate: item.startDate,
+            endDate: item.endDate,
+            completed: item.completed,
+        })) : [],
+        team: p.team ? p.team.map(item => ({
+            id: item.id,
+            name: item.name,
+            email: item.email,
+            role: item.role,
+        })) : [],
+        approvers: p.approvers ? p.approvers.map(item => ({
+            id: item.id,
+            name: item.name,
+            email: item.email,
+            role: item.role,
+        })) : [],
+        detailsFile: null, // Files cannot be stored in Firestore and cause serialization issues.
+        costingFile: null,
+    };
+
+    return cleanProject;
+};
+
+
 export const NewProjectView: React.FC<NewProjectViewProps> = ({ inventory, teamMembers, onSubmit, onCancel, currentUser, projectToEdit, projectToClone }) => {
   const isEditMode = !!projectToEdit;
   const isCloneMode = !!projectToClone && !isEditMode;
 
   const getInitialProjectState = (): Partial<Project> => {
-    if (isEditMode && projectToEdit) {
-      return projectToEdit;
+    const sourceProject = isEditMode ? projectToEdit : projectToClone;
+    const sanitized = sanitizeProject(sourceProject);
+
+    if (isEditMode) {
+      return sanitized;
     }
-    if (isCloneMode && projectToClone) {
-      // Clone the project but reset fields for a new submission
-      const { id, status, submissionDate, submittedBy, ...rest } = projectToClone;
-      return {
-        ...rest,
-        name: `Copy of ${projectToClone.name}`, // Suggest a new name
-      };
+    if (isCloneMode) {
+        // Clone the project but reset fields for a new submission
+        const { id, status, submissionDate, submittedBy, checkedBy, approvedBy, ...rest } = sanitized;
+        return {
+          ...rest,
+          name: `Copy of ${sourceProject?.name || ''}`, // Suggest a new name
+        };
     }
     return {
       name: '',
@@ -59,9 +112,15 @@ export const NewProjectView: React.FC<NewProjectViewProps> = ({ inventory, teamM
   };
 
   const [currentStep, setCurrentStep] = useState(1);
-  const [project, setProject] = useState<Partial<Project>>(getInitialProjectState());
+  const [project, setProject] = useState<Partial<Project>>({});
   const [isGenerating, setIsGenerating] = useState(false);
   const [aiSummary, setAiSummary] = useState('');
+
+  // Use useEffect to initialize state to prevent issues with stale closures
+  useEffect(() => {
+    setProject(getInitialProjectState());
+  }, [projectToEdit, projectToClone]);
+
 
   const handleNext = () => setCurrentStep(prev => Math.min(prev + 1, STEPS.length));
   const handleBack = () => setCurrentStep(prev => Math.max(prev - 1, 1));
@@ -79,19 +138,14 @@ export const NewProjectView: React.FC<NewProjectViewProps> = ({ inventory, teamM
   };
   
   const handleSubmit = () => {
-    const finalProject: Project = isEditMode
-    ? ({
-        ...projectToEdit,
+    const finalProject = {
         ...project,
-      } as Project)
-    : ({
-        id: `proj-${Date.now()}`,
-        status: ProjectStatus.PENDING_REVIEW,
-        submittedBy: currentUser.username,
-        submissionDate: new Date().toISOString(),
-        ...project,
+        id: isEditMode ? project.id : `proj-${Date.now()}`,
+        status: isEditMode ? project.status : ProjectStatus.PENDING_REVIEW,
+        submittedBy: isEditMode ? project.submittedBy : currentUser.username,
+        submissionDate: isEditMode ? project.submissionDate : new Date().toISOString(),
         details: project.details || aiSummary,
-      } as Project);
+      } as Project;
     
     onSubmit(finalProject);
   };
@@ -168,6 +222,11 @@ const ProjectDetailsStep: React.FC<{ project: Partial<Project>, updateProject: (
 
 const BomStep: React.FC<{ project: Partial<Project>, updateProject: (data: Partial<Project>) => void, inventory: InventoryItem[] }> = ({ project, updateProject, inventory }) => {
     const [newItem, setNewItem] = useState({ name: '', quantityNeeded: 1, price: 0, source: 'Purchase' as 'Purchase' | 'Inventory', inventoryItemId: '' });
+    const [editingIndex, setEditingIndex] = useState<number | null>(null);
+    const [editingItemData, setEditingItemData] = useState<BomItem | null>(null);
+
+    const dragItem = useRef<number | null>(null);
+    const dragOverItem = useRef<number | null>(null);
 
     const handleAddItem = () => {
         if (!newItem.name || newItem.quantityNeeded <= 0 || newItem.price < 0) {
@@ -205,11 +264,58 @@ const BomStep: React.FC<{ project: Partial<Project>, updateProject: (data: Parti
         updateProject({ bom: newBom });
     };
 
+    const handleStartEdit = (index: number) => {
+        setEditingIndex(index);
+        setEditingItemData(JSON.parse(JSON.stringify(project.bom![index])));
+    };
+
+    const handleCancelEdit = () => {
+        setEditingIndex(null);
+        setEditingItemData(null);
+    };
+
+    const handleSaveEdit = () => {
+        if (editingIndex === null || !editingItemData) return;
+        const newBom = [...(project.bom || [])];
+        newBom[editingIndex] = editingItemData;
+        updateProject({ bom: newBom });
+        setEditingIndex(null);
+        setEditingItemData(null);
+    };
+
+    const handleEditingDataChange = (field: keyof BomItem, value: string | number) => {
+        if (editingItemData) {
+            setEditingItemData({ ...editingItemData, [field]: value });
+        }
+    };
+
+    const handleDragStart = (e: React.DragEvent<HTMLLIElement>, index: number) => {
+        dragItem.current = index;
+        e.currentTarget.style.opacity = '0.4';
+    };
+
+    const handleDragEnter = (e: React.DragEvent<HTMLLIElement>, index: number) => {
+        dragOverItem.current = index;
+    };
+
+    const handleDrop = () => {
+        if (dragItem.current === null || dragOverItem.current === null) return;
+        const newBom = [...(project.bom || [])];
+        const draggedItemContent = newBom.splice(dragItem.current, 1)[0];
+        newBom.splice(dragOverItem.current, 0, draggedItemContent);
+        updateProject({ bom: newBom });
+        dragItem.current = null;
+        dragOverItem.current = null;
+    };
+
+    const handleDragEnd = (e: React.DragEvent<HTMLLIElement>) => {
+      e.currentTarget.style.opacity = '1';
+    };
+
     return (
         <div className="space-y-6">
             <h2 className="text-xl font-semibold text-white">Step 2: Bill of Materials (BOM)</h2>
             
-            {/* Form to add new item */}
             <div className="p-4 border border-gray-700 rounded-lg space-y-4">
                 <h3 className="font-medium text-white">Add BOM Item</h3>
                 <div className="flex space-x-2">
@@ -236,23 +342,65 @@ const BomStep: React.FC<{ project: Partial<Project>, updateProject: (data: Parti
                  <Button onClick={handleAddItem} variant="secondary">Add Item</Button>
             </div>
 
-            {/* List of current BOM items */}
              <div>
                 <h3 className="font-medium text-white mb-2">Current BOM</h3>
                  <ul className="space-y-2">
                     {project.bom?.map((item, index) => (
-                        <li key={index} className="flex justify-between items-center bg-gray-800 p-3 rounded-md">
-                            <div>
-                                <p className="font-semibold text-white">{item.name}</p>
-                                <p className="text-sm text-gray-400">
-                                    {item.quantityNeeded} units @ ${item.price.toFixed(2)} each | 
-                                    <span className={`ml-2 px-2 py-0.5 text-xs rounded-full ${item.source === 'Inventory' ? 'bg-green-500/20 text-green-400' : 'bg-yellow-500/20 text-yellow-400'}`}>{item.source}</span>
-                                </p>
-                            </div>
-                            <div className="flex items-center space-x-4">
-                                <span className="font-bold text-white">${(item.quantityNeeded * item.price).toFixed(2)}</span>
-                                <Button onClick={() => handleRemoveItem(index)} variant="danger-outline" size="sm" iconName="trash-outline" />
-                            </div>
+                        <li 
+                            key={item.inventoryItemId}
+                            className="bg-gray-800 p-3 rounded-md"
+                            draggable
+                            onDragStart={(e) => handleDragStart(e, index)}
+                            onDragEnter={(e) => handleDragEnter(e, index)}
+                            onDrop={handleDrop}
+                            onDragEnd={handleDragEnd}
+                            onDragOver={(e) => e.preventDefault()}
+                        >
+                            {editingIndex === index && editingItemData ? (
+                                <div className="space-y-3">
+                                    <p className="font-semibold text-white">{item.name}</p>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <Input 
+                                            label="Quantity" 
+                                            type="number" 
+                                            value={editingItemData.quantityNeeded} 
+                                            onChange={e => handleEditingDataChange('quantityNeeded', Number(e.target.value))}
+                                        />
+                                        <Input 
+                                            label="Price" 
+                                            type="number" 
+                                            step="0.01"
+                                            value={editingItemData.price} 
+                                            onChange={e => handleEditingDataChange('price', Number(e.target.value))}
+                                            disabled={item.source === 'Inventory'}
+                                        />
+                                    </div>
+                                    <div className="flex justify-end space-x-2">
+                                        <Button onClick={handleCancelEdit} variant="secondary" size="sm">Cancel</Button>
+                                        <Button onClick={handleSaveEdit} variant="primary" size="sm">Save</Button>
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="flex justify-between items-center">
+                                    <div className="flex items-center space-x-3">
+                                        <div className="cursor-grab active:cursor-grabbing text-gray-500">
+                                            <ion-icon name="reorder-four-outline" className="text-xl"></ion-icon>
+                                        </div>
+                                        <div>
+                                            <p className="font-semibold text-white">{item.name}</p>
+                                            <p className="text-sm text-gray-400">
+                                                {item.quantityNeeded} units @ ${item.price.toFixed(2)} each | 
+                                                <span className={`ml-2 px-2 py-0.5 text-xs rounded-full ${item.source === 'Inventory' ? 'bg-green-500/20 text-green-400' : 'bg-yellow-500/20 text-yellow-400'}`}>{item.source}</span>
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center space-x-2">
+                                        <span className="font-bold text-white">${(item.quantityNeeded * item.price).toFixed(2)}</span>
+                                        <Button onClick={() => handleStartEdit(index)} variant="secondary" size="sm" iconName="pencil-outline" />
+                                        <Button onClick={() => handleRemoveItem(index)} variant="danger-outline" size="sm" iconName="trash-outline" />
+                                    </div>
+                                </div>
+                            )}
                         </li>
                     ))}
                  </ul>

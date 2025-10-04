@@ -27,6 +27,7 @@ const NavLink: React.FC<{
     title={isCollapsed ? String(children) : ''}
     className="flex items-center w-full px-4 py-3 text-sm font-medium text-gray-300 rounded-md hover:bg-gray-700 hover:text-white transition-colors duration-200 group"
   >
+    {/* FIX: Changed 'class' to 'className' to resolve JSX property error. */}
     <ion-icon name={iconName} className="text-xl text-gray-400 group-hover:text-white transition-colors duration-200"></ion-icon>
     <span className={`ml-4 transition-opacity duration-200 ${isCollapsed ? 'opacity-0 w-0' : 'opacity-100'}`}>{children}</span>
   </button>
@@ -102,11 +103,13 @@ export const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, setIsCollapsed, c
             <div className={`flex items-center justify-between border-b border-gray-700/50 transition-all duration-300 ${isCollapsed ? 'h-[65px] px-0 justify-center' : 'h-[65px] px-6'}`}>
                 {!isCollapsed && (
                     <div className="flex items-center space-x-3">
+                        {/* FIX: Changed 'class' to 'className' to resolve JSX property error. */}
                         <ion-icon name={flowIcon[currentFlow]} className="text-3xl text-blue-400"></ion-icon>
                         <h1 className="text-xl font-bold whitespace-nowrap">{flowTitle[currentFlow]}</h1>
                     </div>
                 )}
                  <button onClick={() => setIsCollapsed(!isCollapsed)} className={`p-2 rounded-md hover:bg-gray-700 transition-colors ${isCollapsed ? 'mx-auto' : ''}`}>
+                    {/* FIX: Changed 'class' to 'className' to resolve JSX property error. */}
                     <ion-icon name={isCollapsed ? 'chevron-forward-outline' : 'chevron-back-outline'} className="text-xl"></ion-icon>
                 </button>
             </div>
@@ -128,6 +131,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, setIsCollapsed, c
                     )}
                     <div className="space-y-2">
                         <button onClick={() => setShowNotifications(p => !p)} title={isCollapsed ? 'Notifications' : ''} className="relative flex items-center w-full px-4 py-3 text-sm font-medium text-gray-300 rounded-md hover:bg-gray-700 hover:text-white transition-colors duration-200 group">
+                            {/* FIX: Changed 'class' to 'className' to resolve JSX property error. */}
                             <ion-icon name="notifications-outline" className="text-xl text-gray-400 group-hover:text-white transition-colors duration-200"></ion-icon>
                             <span className={`ml-4 transition-opacity duration-200 ${isCollapsed ? 'opacity-0 w-0' : 'opacity-100'}`}>Notifications</span>
                             {unreadCount > 0 && (
@@ -155,11 +159,13 @@ export const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, setIsCollapsed, c
                                 title="Logout"
                                 className={`ml-auto p-2 rounded-md hover:bg-gray-700 transition-colors ${isCollapsed ? 'hidden' : ''}`}
                             >
+                                {/* FIX: Changed 'class' to 'className' to resolve JSX property error. */}
                                 <ion-icon name="log-out-outline" className="text-xl text-gray-400"></ion-icon>
                             </button>
                         </div>
                          {isCollapsed && (
                              <button onClick={onLogout} title="Logout" className="w-full mt-4 flex items-center justify-center p-3 text-sm font-medium text-gray-300 rounded-md hover:bg-gray-700 hover:text-white transition-colors duration-200 group">
+                                 {/* FIX: Changed 'class' to 'className' to resolve JSX property error. */}
                                  <ion-icon name="log-out-outline" className="text-xl text-gray-400 group-hover:text-white transition-colors duration-200"></ion-icon>
                              </button>
                         )}

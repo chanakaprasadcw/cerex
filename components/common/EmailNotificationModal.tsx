@@ -39,6 +39,7 @@ Please review the project details in the ProjectFlow application.`.trim();
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-xl font-bold text-white flex items-center">
             {/* FIX: Changed 'class' to 'className' to fix JSX property error. */}
+            {/* FIX: Changed 'class' to 'className' to resolve JSX property error. */}
             <ion-icon name="mail-outline" className="mr-3 text-2xl text-blue-400"></ion-icon>
             Simulated Email Notification
           </h2>

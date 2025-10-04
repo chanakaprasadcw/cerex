@@ -296,6 +296,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({ inventory, project
       <button onClick={() => requestSort(sortKey)} className="flex items-center uppercase text-xs text-gray-400 font-medium group focus:outline-none">
         <span className="group-hover:text-white transition-colors">{children}</span>
         {/* FIX: Changed 'class' to 'className' to fix JSX property error. */}
+        {/* FIX: Changed 'class' to 'className' to resolve JSX property error. */}
         {sortConfig.key === sortKey ? <ion-icon name={sortConfig.direction === 'asc' ? 'arrow-up-outline' : 'arrow-down-outline'} className="ml-1.5"></ion-icon> : <ion-icon name="remove-outline" className="ml-1.5 text-transparent group-hover:text-gray-500"></ion-icon>}
       </button>
     </th>
@@ -306,6 +307,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({ inventory, project
       <button onClick={() => requestTotalSort(sortKey)} className="flex items-center uppercase text-xs text-gray-400 font-medium group focus:outline-none">
         <span className="group-hover:text-white transition-colors">{children}</span>
         {/* FIX: Changed 'class' to 'className' to fix JSX property error. */}
+        {/* FIX: Changed 'class' to 'className' to resolve JSX property error. */}
         {totalSortConfig.key === sortKey ? <ion-icon name={totalSortConfig.direction === 'asc' ? 'arrow-up-outline' : 'arrow-down-outline'} className="ml-1.5"></ion-icon> : <ion-icon name="remove-outline" className="ml-1.5 text-transparent group-hover:text-gray-500"></ion-icon>}
       </button>
     </th>
@@ -346,6 +348,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({ inventory, project
               <h2 className="text-xl font-semibold text-white">General Inventory (Approved Stock)</h2>
               <div className="relative w-full sm:max-w-xs">
                   {/* FIX: Changed 'class' to 'className' to fix JSX property error. */}
+                  {/* FIX: Changed 'class' to 'className' to resolve JSX property error. */}
                   <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3"><ion-icon name="search-outline" className="h-5 w-5 text-gray-400"></ion-icon></div>
                   <Input label="" name="search" placeholder="Search stock..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="!pl-10 !py-2" />
               </div>

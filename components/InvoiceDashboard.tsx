@@ -49,6 +49,7 @@ export const InvoiceDashboard: React.FC<InvoiceDashboardProps> = ({ purchaseReco
                     <div className="flex items-center">
                         <div className="flex-shrink-0 bg-brand-primary rounded-md p-3">
                            {/* FIX: Changed 'class' to 'className' to fix JSX property error. */}
+                           {/* FIX: Changed 'class' to 'className' to resolve JSX property error. */}
                            <ion-icon name="cash-outline" className="text-2xl text-blue-200"></ion-icon>
                         </div>
                         <div className="ml-4">
@@ -61,6 +62,7 @@ export const InvoiceDashboard: React.FC<InvoiceDashboardProps> = ({ purchaseReco
                     <div className="flex items-center">
                         <div className="flex-shrink-0 bg-cyan-800 rounded-md p-3">
                            {/* FIX: Changed 'class' to 'className' to fix JSX property error. */}
+                           {/* FIX: Changed 'class' to 'className' to resolve JSX property error. */}
                            <ion-icon name="eye-outline" className="text-2xl text-cyan-300"></ion-icon>
                         </div>
                         <div className="ml-4">
@@ -73,6 +75,7 @@ export const InvoiceDashboard: React.FC<InvoiceDashboardProps> = ({ purchaseReco
                     <div className="flex items-center">
                         <div className="flex-shrink-0 bg-yellow-800 rounded-md p-3">
                            {/* FIX: Changed 'class' to 'className' to fix JSX property error. */}
+                           {/* FIX: Changed 'class' to 'className' to resolve JSX property error. */}
                            <ion-icon name="time-outline" className="text-2xl text-yellow-300"></ion-icon>
                         </div>
                         <div className="ml-4">

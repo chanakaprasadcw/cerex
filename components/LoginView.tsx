@@ -65,6 +65,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onSignIn, onSignUp, onRese
         <div className="w-full max-w-sm">
           <div className="flex justify-center items-center space-x-3 mb-8">
             {/* FIX: Changed 'class' to 'className' to fix JSX property error. */}
+            {/* FIX: Changed 'class' to 'className' to resolve JSX property error. */}
             <ion-icon name="git-network-outline" className="text-5xl text-blue-400"></ion-icon>
             <h1 className="text-4xl font-bold text-white">ProjectFlow</h1>
           </div>

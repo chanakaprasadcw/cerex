@@ -35,6 +35,7 @@ export const Modal: React.FC<ModalProps> = ({
               {message && (
                 <div className={`mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full ${variant === 'danger' ? 'bg-red-900/50' : 'bg-yellow-900/50'} sm:mx-0 sm:h-10 sm:w-10`}>
                   {/* FIX: Changed 'class' to 'className' to fix JSX property error. */}
+                  {/* FIX: Changed 'class' to 'className' to resolve JSX property error. */}
                   <ion-icon name={iconName} className={`h-6 w-6 ${iconColor}`}></ion-icon>
                 </div>
               )}

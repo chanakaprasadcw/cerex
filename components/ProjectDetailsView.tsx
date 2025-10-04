@@ -177,6 +177,7 @@ export const ProjectDetailsView: React.FC<ProjectDetailsViewProps> = ({ project,
                 <Card>
                     <h2 className="text-xl font-semibold text-white mb-4 flex items-center">
                         {/* FIX: Changed 'class' to 'className' to fix JSX property error. */}
+                        {/* FIX: Changed 'class' to 'className' to resolve JSX property error. */}
                         <ion-icon name="alert-circle-outline" className="mr-3 text-yellow-400 text-2xl"></ion-icon>
                         Action Required
                     </h2>

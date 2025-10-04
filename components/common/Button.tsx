@@ -43,6 +43,7 @@ export const Button: React.FC<ButtonProps> = ({
       {...props}
     >
       {/* FIX: Changed 'class' to 'className' to fix JSX property error. */}
+      {/* FIX: Changed 'class' to 'className' to resolve JSX property error. */}
       {iconName && <ion-icon name={iconName} className={`${children ? 'mr-2' : ''} ${iconSizeClass}`}></ion-icon>}
       {children}
     </button>

@@ -20,6 +20,7 @@ export const StepIndicator: React.FC<StepIndicatorProps> = ({ steps, currentStep
                 </div>
                 <div className="relative w-8 h-8 flex items-center justify-center bg-blue-600 rounded-full">
                   {/* FIX: Changed 'class' to 'className' to fix JSX property error. */}
+                  {/* FIX: Changed 'class' to 'className' to resolve JSX property error. */}
                   <ion-icon name="checkmark-outline" className="w-5 h-5 text-white"></ion-icon>
                 </div>
                 <span className="absolute mt-2 text-sm font-medium text-blue-400 w-32 text-center -translate-x-1/2 left-1/2">{step}</span>

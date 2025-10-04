@@ -63,9 +63,11 @@ export const DatePicker: React.FC<DatePickerProps> = ({ label, name, value, onCh
       <div className="absolute top-full mt-2 w-72 bg-gray-800/80 backdrop-blur-lg border border-gray-700 rounded-lg shadow-2xl p-4 z-10 animate-scale-up origin-top-left">
         <div className="flex justify-between items-center mb-4">
           {/* FIX: Changed 'class' to 'className' for ion-icon component to align with React standards. */}
+          {/* FIX: Changed 'class' to 'className' to resolve JSX property error. */}
           <button type="button" onClick={() => changeMonth(-1)} className="p-2 rounded-full hover:bg-gray-700"><ion-icon name="chevron-back-outline" className=""></ion-icon></button>
           <span className="font-semibold text-white">{viewDate.toLocaleString('default', { month: 'long', year: 'numeric' })}</span>
           {/* FIX: Changed 'class' to 'className' for ion-icon component to align with React standards. */}
+          {/* FIX: Changed 'class' to 'className' to resolve JSX property error. */}
           <button type="button" onClick={() => changeMonth(1)} className="p-2 rounded-full hover:bg-gray-700"><ion-icon name="chevron-forward-outline" className=""></ion-icon></button>
         </div>
         <div className="grid grid-cols-7 gap-1 text-center text-xs text-gray-400 mb-2">
@@ -118,6 +120,7 @@ export const DatePicker: React.FC<DatePickerProps> = ({ label, name, value, onCh
         />
         <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3">
             {/* FIX: Changed 'class' to 'className' for ion-icon component to align with React standards. */}
+            {/* FIX: Changed 'class' to 'className' to resolve JSX property error. */}
             <ion-icon name="calendar-outline" className="text-gray-400"></ion-icon>
         </div>
       </div>

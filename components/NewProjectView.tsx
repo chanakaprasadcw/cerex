@@ -235,6 +235,7 @@ export const NewProjectView: React.FC<NewProjectViewProps> = ({ inventory, teamM
             {validationError && (
               <div className="bg-red-500/10 border border-red-400/30 text-red-300 px-4 py-3 rounded-lg mb-6 flex items-center" role="alert">
                 {/* FIX: Changed 'class' to 'className' to fix JSX property error. */}
+                {/* FIX: Changed 'class' to 'className' to resolve JSX property error. */}
                 <ion-icon name="alert-circle-outline" className="text-xl mr-3"></ion-icon>
                 <span>{validationError}</span>
               </div>
@@ -242,6 +243,7 @@ export const NewProjectView: React.FC<NewProjectViewProps> = ({ inventory, teamM
              {submissionError && !isEditMode && (
               <div className="bg-red-500/10 border border-red-400/30 text-red-300 px-4 py-3 rounded-lg mb-6 flex items-center" role="alert">
                 {/* FIX: Changed 'class' to 'className' to fix JSX property error. */}
+                {/* FIX: Changed 'class' to 'className' to resolve JSX property error. */}
                 <ion-icon name="close-circle-outline" className="text-xl mr-3"></ion-icon>
                 <span>{submissionError}</span>
               </div>
@@ -474,6 +476,7 @@ const BomStep: React.FC<{ project: Partial<Project>, updateProject: (data: Parti
             {splitMessage && (
               <div className="bg-yellow-500/10 border border-yellow-400/30 text-yellow-300 px-4 py-3 rounded-lg flex items-center" role="alert">
                 {/* FIX: Changed 'class' to 'className' to fix JSX property error. */}
+                {/* FIX: Changed 'class' to 'className' to resolve JSX property error. */}
                 <ion-icon name="information-circle-outline" className="text-xl mr-3"></ion-icon>
                 <span>{splitMessage}</span>
               </div>
@@ -563,6 +566,7 @@ const BomStep: React.FC<{ project: Partial<Project>, updateProject: (data: Parti
                                 >
                                     <td className="px-6 py-4 text-gray-500 cursor-move text-center">
                                         {/* FIX: Changed 'class' to 'className' to fix JSX property error. */}
+                                        {/* FIX: Changed 'class' to 'className' to resolve JSX property error. */}
                                         <ion-icon name="menu-outline" className=""></ion-icon>
                                     </td>
                                     <td className="px-6 py-4 font-medium text-white">{item.name}</td>

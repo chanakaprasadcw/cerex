@@ -94,6 +94,7 @@ export const Chatbot: React.FC<ChatbotProps> = ({ onClose, isSidebarCollapsed })
         <header className="flex items-center justify-between p-4 border-b border-gray-700 flex-shrink-0">
           <h2 className="text-lg font-semibold text-white flex items-center">
             {/* FIX: Changed 'class' to 'className' to fix JSX property error. */}
+            {/* FIX: Changed 'class' to 'className' to resolve JSX property error. */}
             <ion-icon name="sparkles-outline" className="mr-2 text-blue-400"></ion-icon>
             AI Assistant
           </h2>

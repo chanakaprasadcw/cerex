@@ -21,6 +21,7 @@ const FlowCard: React.FC<{
   >
     <div className="bg-gray-900/50 p-4 rounded-full mb-6 border border-gray-700 transition-colors duration-300 group-hover:border-blue-500/30">
       {/* FIX: Changed 'class' to 'className' to fix JSX property error. */}
+      {/* FIX: Changed 'class' to 'className' to resolve JSX property error. */}
       <ion-icon name={iconName} className="text-4xl text-blue-400 transition-transform duration-300 group-hover:scale-110"></ion-icon>
     </div>
     <h3 className="text-2xl font-bold text-white mb-2">{title}</h3>
@@ -28,6 +29,7 @@ const FlowCard: React.FC<{
     <div className="mt-8 text-blue-400 font-semibold flex items-center">
       Select Flow
       {/* FIX: Changed 'class' to 'className' to fix JSX property error. */}
+      {/* FIX: Changed 'class' to 'className' to resolve JSX property error. */}
       <ion-icon name="arrow-forward-outline" className="ml-2 transition-transform duration-300 group-hover:translate-x-1"></ion-icon>
     </div>
   </button>

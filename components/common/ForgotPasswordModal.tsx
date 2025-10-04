@@ -41,6 +41,7 @@ export const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({ onClos
         {!isSubmitted ? (
           <form onSubmit={handleSubmit} className="p-4 pt-0 space-y-6 text-center">
             {/* FIX: Changed 'class' to 'className' to fix JSX property error. */}
+            {/* FIX: Changed 'class' to 'className' to resolve JSX property error. */}
             <ion-icon name="mail-open-outline" className="text-5xl text-blue-400 mx-auto"></ion-icon>
             <h2 className="text-xl font-bold text-white">Forgot Password?</h2>
             <p className="text-gray-400">
@@ -62,6 +63,7 @@ export const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({ onClos
         ) : (
           <div className="p-4 pt-0 space-y-6 text-center">
              {/* FIX: Changed 'class' to 'className' to fix JSX property error. */}
+             {/* FIX: Changed 'class' to 'className' to resolve JSX property error. */}
              <ion-icon name="checkmark-circle-outline" className="text-5xl text-green-400 mx-auto"></ion-icon>
             <h2 className="text-xl font-bold text-white">Request Sent</h2>
             <p className="text-gray-300">

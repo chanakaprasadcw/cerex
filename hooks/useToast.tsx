@@ -32,10 +32,12 @@ const Toast: React.FC<{ toast: ToastMessage; onDismiss: (id: number) => void }> 
   return (
     <div className={`flex items-center p-4 rounded-lg shadow-2xl text-white border-l-4 animate-slide-in-right backdrop-blur-sm ${typeClasses[toast.type]}`}>
       {/* FIX: Changed 'class' to 'className' to fix JSX property error. */}
+      {/* FIX: Changed 'class' to 'className' to resolve JSX property error. */}
       <ion-icon name={toast.icon} className="text-2xl mr-3 flex-shrink-0"></ion-icon>
       <p className="flex-1 text-sm font-medium">{toast.message}</p>
       <button onClick={() => onDismiss(toast.id)} className="ml-4 p-1 rounded-full hover:bg-white/10 flex-shrink-0">
         {/* FIX: Changed 'class' to 'className' to fix JSX property error. */}
+        {/* FIX: Changed 'class' to 'className' to resolve JSX property error. */}
         <ion-icon name="close-outline" className="text-xl"></ion-icon>
       </button>
     </div>

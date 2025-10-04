@@ -59,6 +59,7 @@ export const TimeTrackingDashboard: React.FC<TimeTrackingDashboardProps> = ({ ti
                 <Card>
                     <div className="flex items-center">
                         <div className="flex-shrink-0 bg-cyan-800 rounded-md p-3">
+                           {/* FIX: Changed 'class' to 'className' to resolve JSX property error. */}
                            <ion-icon name="today-outline" className="text-2xl text-cyan-200"></ion-icon>
                         </div>
                         <div className="ml-4">
@@ -70,6 +71,7 @@ export const TimeTrackingDashboard: React.FC<TimeTrackingDashboardProps> = ({ ti
                  <Card>
                     <div className="flex items-center">
                         <div className="flex-shrink-0 bg-blue-800 rounded-md p-3">
+                           {/* FIX: Changed 'class' to 'className' to resolve JSX property error. */}
                            <ion-icon name="calendar-outline" className="text-2xl text-blue-200"></ion-icon>
                         </div>
                         <div className="ml-4">

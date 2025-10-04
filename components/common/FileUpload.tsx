@@ -10,10 +10,17 @@ interface FileUploadProps {
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 const ALLOWED_FILE_TYPES = {
+  // Documents
   'application/pdf': '.pdf',
   'application/vnd.openxmlformats-officedocument.wordprocessingml.document': '.docx',
   'text/csv': '.csv',
   'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': '.xlsx',
+  // Images
+  'image/jpeg': '.jpeg, .jpg',
+  'image/png': '.png',
+  'image/gif': '.gif',
+  'image/webp': '.webp',
+  'image/svg+xml': '.svg',
 };
 
 type Status = 'idle' | 'success' | 'error';
@@ -104,6 +111,7 @@ export const FileUpload: React.FC<FileUploadProps> = ({ label, onFileSelect }) =
         return (
           <div className="text-center">
             {/* FIX: Changed 'class' to 'className' to fix JSX property error. */}
+            {/* FIX: Changed 'class' to 'className' to resolve JSX property error. */}
             <ion-icon name="close-circle-outline" className="mx-auto h-12 w-12 text-red-400"></ion-icon>
             <p className="mt-2 text-sm text-red-300 font-semibold">{errorMessage}</p>
             <p className="text-xs text-red-400">Please try a different file.</p>
@@ -113,6 +121,7 @@ export const FileUpload: React.FC<FileUploadProps> = ({ label, onFileSelect }) =
         return (
           <div className="text-center">
             {/* FIX: Changed 'class' to 'className' to fix JSX property error. */}
+            {/* FIX: Changed 'class' to 'className' to resolve JSX property error. */}
             <ion-icon name="checkmark-done-circle-outline" className="mx-auto h-12 w-12 text-green-400"></ion-icon>
             <p className="mt-2 text-sm font-semibold text-white truncate max-w-xs" title={fileName || ''}>{fileName}</p>
             <p className="text-xs text-green-400">File selected successfully.</p>
@@ -125,13 +134,14 @@ export const FileUpload: React.FC<FileUploadProps> = ({ label, onFileSelect }) =
         return (
           <div className="space-y-1 text-center">
             {/* FIX: Changed 'class' to 'className' to fix JSX property error. */}
+            {/* FIX: Changed 'class' to 'className' to resolve JSX property error. */}
             <ion-icon name="cloud-upload-outline" className="mx-auto h-12 w-12 text-gray-500"></ion-icon>
             <div className="flex text-sm text-gray-400">
               <p className="pl-1">
                 <span className="font-semibold text-blue-400">Upload a file</span> or drag and drop
               </p>
             </div>
-            <p className="text-xs text-gray-500">PDF, DOCX, CSV, XLSX up to 10MB</p>
+            <p className="text-xs text-gray-500">Images (JPG, PNG, GIF) & Docs (PDF, DOCX) up to 10MB</p>
           </div>
         );
     }

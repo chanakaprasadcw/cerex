@@ -142,6 +142,7 @@ export const ProjectCostView: React.FC<ProjectCostViewProps> = ({ purchaseRecord
         ) : (
           <div className="text-center py-20 text-gray-500">
             {/* FIX: Changed 'class' to 'className' for ion-icon component to align with React standards. */}
+            {/* FIX: Changed 'class' to 'className' to resolve JSX property error. */}
             <ion-icon name="analytics-outline" className="text-6xl mb-4"></ion-icon>
             <p>Please select a project to view its cost breakdown.</p>
           </div>

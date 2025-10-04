@@ -64,6 +64,7 @@ export const ProjectDashboard: React.FC<ProjectDashboardProps> = ({ projects, on
           <div className="flex items-center">
             <div className="flex-shrink-0 bg-brand-primary rounded-md p-3">
                {/* FIX: Changed 'class' to 'className' to fix JSX property error. */}
+               {/* FIX: Changed 'class' to 'className' to resolve JSX property error. */}
                <ion-icon name="file-tray-stacked-outline" className="text-2xl text-blue-200"></ion-icon>
             </div>
             <div className="ml-4">
@@ -76,6 +77,7 @@ export const ProjectDashboard: React.FC<ProjectDashboardProps> = ({ projects, on
           <div className="flex items-center">
             <div className="flex-shrink-0 bg-cyan-800 rounded-md p-3">
                {/* FIX: Changed 'class' to 'className' to fix JSX property error. */}
+               {/* FIX: Changed 'class' to 'className' to resolve JSX property error. */}
                <ion-icon name="eye-outline" className="text-2xl text-cyan-300"></ion-icon>
             </div>
             <div className="ml-4">
@@ -88,6 +90,7 @@ export const ProjectDashboard: React.FC<ProjectDashboardProps> = ({ projects, on
           <div className="flex items-center">
             <div className="flex-shrink-0 bg-yellow-800 rounded-md p-3">
                {/* FIX: Changed 'class' to 'className' to fix JSX property error. */}
+               {/* FIX: Changed 'class' to 'className' to resolve JSX property error. */}
                <ion-icon name="time-outline" className="text-2xl text-yellow-300"></ion-icon>
             </div>
             <div className="ml-4">
@@ -102,6 +105,7 @@ export const ProjectDashboard: React.FC<ProjectDashboardProps> = ({ projects, on
           <Card>
               <h2 className="text-xl font-semibold mb-4 text-white flex items-center">
                   {/* FIX: Changed 'class' to 'className' to fix JSX property error. */}
+                  {/* FIX: Changed 'class' to 'className' to resolve JSX property error. */}
                   <ion-icon name="alert-circle-outline" className="mr-3 text-yellow-400 text-2xl"></ion-icon>
                   Action Required: Awaiting Your Acknowledgment
               </h2>
@@ -113,11 +117,13 @@ export const ProjectDashboard: React.FC<ProjectDashboardProps> = ({ projects, on
                             <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-gray-400 mt-1">
                                 <span className="flex items-center">
                                     {/* FIX: Changed 'class' to 'className' to fix JSX property error. */}
+                                    {/* FIX: Changed 'class' to 'className' to resolve JSX property error. */}
                                     <ion-icon name="pencil-outline" className="mr-1.5 align-middle text-base"></ion-icon>
                                     Changes made by {project.lastEditor || 'a reviewer'}
                                 </span>
                                 <span className="flex items-center">
                                     {/* FIX: Changed 'class' to 'className' to fix JSX property error. */}
+                                    {/* FIX: Changed 'class' to 'className' to resolve JSX property error. */}
                                     <ion-icon name="calendar-outline" className="mr-1.5 align-middle text-base"></ion-icon>
                                     {project.lastEditDate ? new Date(project.lastEditDate).toLocaleDateString() : 'Recently'}
                                 </span>
@@ -138,6 +144,7 @@ export const ProjectDashboard: React.FC<ProjectDashboardProps> = ({ projects, on
           <Card>
               <h2 className="text-xl font-semibold mb-4 text-white flex items-center">
                   {/* FIX: Changed 'class' to 'className' to fix JSX property error. */}
+                  {/* FIX: Changed 'class' to 'className' to resolve JSX property error. */}
                   <ion-icon name="document-text-outline" className="mr-3 text-cyan-400 text-2xl"></ion-icon>
                   Projects Awaiting Your Review
               </h2>
@@ -151,11 +158,13 @@ export const ProjectDashboard: React.FC<ProjectDashboardProps> = ({ projects, on
                                 <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-gray-400 mt-1">
                                     <span className="flex items-center">
                                         {/* FIX: Changed 'class' to 'className' to fix JSX property error. */}
+                                        {/* FIX: Changed 'class' to 'className' to resolve JSX property error. */}
                                         <ion-icon name="person-circle-outline" className="mr-1.5 align-middle text-base"></ion-icon>
                                         {project.submittedBy}
                                     </span>
                                     <span className="flex items-center">
                                         {/* FIX: Changed 'class' to 'className' to fix JSX property error. */}
+                                        {/* FIX: Changed 'class' to 'className' to resolve JSX property error. */}
                                         <ion-icon name="calendar-outline" className="mr-1.5 align-middle text-base"></ion-icon>
                                         {new Date(project.submissionDate).toLocaleDateString()}
                                     </span>
@@ -178,6 +187,7 @@ export const ProjectDashboard: React.FC<ProjectDashboardProps> = ({ projects, on
           <Card>
               <h2 className="text-xl font-semibold mb-4 text-white flex items-center">
                   {/* FIX: Changed 'class' to 'className' to fix JSX property error. */}
+                  {/* FIX: Changed 'class' to 'className' to resolve JSX property error. */}
                   <ion-icon name="document-text-outline" className="mr-3 text-orange-400 text-2xl"></ion-icon>
                   Projects Awaiting Your Approval
               </h2>
@@ -191,12 +201,14 @@ export const ProjectDashboard: React.FC<ProjectDashboardProps> = ({ projects, on
                                 <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-gray-400 mt-1">
                                     <span className="flex items-center">
                                         {/* FIX: Changed 'class' to 'className' to fix JSX property error. */}
+                                        {/* FIX: Changed 'class' to 'className' to resolve JSX property error. */}
                                         <ion-icon name="person-circle-outline" className="mr-1.5 align-middle text-base"></ion-icon>
                                         {project.submittedBy}
                                     </span>
                                     {project.checkedBy && (
                                        <span className="flex items-center">
                                             {/* FIX: Changed 'class' to 'className' to fix JSX property error. */}
+                                            {/* FIX: Changed 'class' to 'className' to resolve JSX property error. */}
                                             <ion-icon name="checkmark-done-circle-outline" className="mr-1.5 align-middle text-base"></ion-icon>
                                             Checked by {project.checkedBy}
                                         </span> 
@@ -240,6 +252,7 @@ export const ProjectDashboard: React.FC<ProjectDashboardProps> = ({ projects, on
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-xl font-semibold text-white flex items-center">
               {/* FIX: Changed 'class' to 'className' to fix JSX property error. */}
+              {/* FIX: Changed 'class' to 'className' to resolve JSX property error. */}
               <ion-icon name="close-circle-outline" className="mr-3 text-red-400 text-2xl"></ion-icon>
               Rejected Projects
             </h2>

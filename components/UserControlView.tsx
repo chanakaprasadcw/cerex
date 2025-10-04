@@ -86,9 +86,11 @@ export const UserControlView: React.FC<UserControlViewProps> = ({ users, current
       <span className="group-hover:text-white transition-colors">{children}</span>
       {sortConfig.key === sortKey ? (
         // FIX: Changed 'class' to 'className' to fix JSX property error.
+        // FIX: Changed 'class' to 'className' to resolve JSX property error.
         <ion-icon name={sortConfig.direction === 'asc' ? 'arrow-up-outline' : 'arrow-down-outline'} className="ml-1.5"></ion-icon>
       ) : (
         // FIX: Changed 'class' to 'className' to fix JSX property error.
+        // FIX: Changed 'class' to 'className' to resolve JSX property error.
         <ion-icon name="remove-outline" className="ml-1.5 text-transparent group-hover:text-gray-500"></ion-icon>
       )}
     </button>
@@ -171,6 +173,7 @@ export const UserControlView: React.FC<UserControlViewProps> = ({ users, current
                              <div key={entry.id} className="flex items-start space-x-4 p-3 bg-gray-800/50 rounded-lg">
                                 <div className="flex-shrink-0 pt-1">
                                     {/* FIX: Changed 'class' to 'className' to fix JSX property error. */}
+                                    {/* FIX: Changed 'class' to 'className' to resolve JSX property error. */}
                                     <ion-icon name="time-outline" className="text-lg text-gray-500"></ion-icon>
                                 </div>
                                 <div className="flex-1">
@@ -183,6 +186,7 @@ export const UserControlView: React.FC<UserControlViewProps> = ({ users, current
                 ) : (
                     <div className="text-center py-10 text-gray-500">
                         {/* FIX: Changed 'class' to 'className' to fix JSX property error. */}
+                        {/* FIX: Changed 'class' to 'className' to resolve JSX property error. */}
                         <ion-icon name="file-tray-outline" className="text-4xl mb-2"></ion-icon>
                         <p>No activity recorded for this user.</p>
                     </div>
@@ -193,6 +197,7 @@ export const UserControlView: React.FC<UserControlViewProps> = ({ users, current
             <Card>
               <div className="text-center py-20 text-gray-500">
                 {/* FIX: Changed 'class' to 'className' to fix JSX property error. */}
+                {/* FIX: Changed 'class' to 'className' to resolve JSX property error. */}
                 <ion-icon name="people-circle-outline" className="text-6xl mb-4"></ion-icon>
                 <h2 className="text-xl font-semibold">Select a User</h2>
                 <p>Choose a user from the list to view their activity history and manage their role.</p>

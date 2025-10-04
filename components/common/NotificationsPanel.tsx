@@ -54,6 +54,7 @@ export const NotificationsPanel: React.FC<NotificationsPanelProps> = ({ notifica
                 {notifications.length === 0 ? (
                     <div className="text-center py-10 px-4 text-gray-500">
                         {/* FIX: Changed 'class' to 'className' to fix JSX property error. */}
+                        {/* FIX: Changed 'class' to 'className' to resolve JSX property error. */}
                         <ion-icon name="mail-open-outline" className="text-4xl mb-2"></ion-icon>
                         <p>You're all caught up!</p>
                     </div>

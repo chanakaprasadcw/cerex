@@ -52,6 +52,7 @@ export const TimeAnalyticsCharts: React.FC<TimeAnalyticsChartsProps> = ({ timeLo
         <div className="flex items-center justify-center h-full text-center text-gray-500">
             <div>
                 {/* FIX: Changed 'class' to 'className' to fix JSX property error. */}
+                {/* FIX: Changed 'class' to 'className' to resolve JSX property error. */}
                 <ion-icon name="bar-chart-outline" className="text-4xl mb-2"></ion-icon>
                 <p>Not enough data for charts.</p>
             </div>

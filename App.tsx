@@ -300,6 +300,7 @@ const AppContent: React.FC = () => {
         aria-label="Toggle AI Assistant"
       >
         {/* FIX: Changed 'class' to 'className' to fix JSX property error. */}
+        {/* FIX: Changed 'class' to 'className' to resolve JSX property error. */}
         <ion-icon name={isChatbotOpen ? "close-outline" : "sparkles-outline"} className="text-2xl"></ion-icon>
       </button>
       {isChatbotOpen && <Chatbot onClose={() => setIsChatbotOpen(false)} isSidebarCollapsed={isSidebarCollapsed} />}

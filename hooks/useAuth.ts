@@ -46,6 +46,12 @@ export const useAuth = () => {
             const userDoc = await getDoc(userDocRef);
             if (userDoc.exists()) {
               const userData = { uid: firebaseUser.uid, ...userDoc.data() } as User;
+
+              // Super Admin override
+              if (userData.email === 'admini@cerex.ae') {
+                userData.role = UserRole.SUPER_ADMIN;
+              }
+
               setCurrentUser(userData);
               if (!loggedInThisSession) {
                   await logActivity(userData, ActivityAction.USER_LOGIN, {});

@@ -1,14 +1,16 @@
+// FIX: Import types for side effects to augment JSX before React is imported. This ensures custom element types like 'ion-icon' are globally available.
+import '../types';
 import React, { useState, useEffect, useRef } from 'react';
 import { GoogleGenAI, Chat } from "@google/genai";
 import { Card } from './common/Card';
 import { Button } from './common/Button';
-import {} from '../types'; // For ion-icon types
 
 // As per guidelines, assume API_KEY is set in the environment.
 const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
 interface ChatbotProps {
   onClose: () => void;
+  isSidebarCollapsed: boolean;
 }
 
 interface Message {
@@ -16,7 +18,7 @@ interface Message {
   sender: 'user' | 'bot';
 }
 
-export const Chatbot: React.FC<ChatbotProps> = ({ onClose }) => {
+export const Chatbot: React.FC<ChatbotProps> = ({ onClose, isSidebarCollapsed }) => {
   const [chat, setChat] = useState<Chat | null>(null);
   const [messages, setMessages] = useState<Message[]>([
     { sender: 'bot', text: 'Hello! How can I help you with your projects or inventory today?' }
@@ -80,12 +82,18 @@ export const Chatbot: React.FC<ChatbotProps> = ({ onClose }) => {
       setIsLoading(false);
     }
   };
+  
+  const sidebarWidth = isSidebarCollapsed ? '80px' : '288px';
 
   return (
-    <div className="fixed bottom-20 right-4 sm:right-6 lg:right-8 w-[calc(100%-2rem)] max-w-sm h-[60vh] max-h-[500px] z-40">
-      <Card className="h-full flex flex-col !p-0">
+    <div 
+        className="fixed bottom-20 right-4 sm:right-6 lg:right-8 w-[calc(100%-2rem)] max-w-sm h-[60vh] max-h-[500px] z-40 transition-transform duration-300"
+        style={{ transform: `translateX(calc(min(0px, -${sidebarWidth} - 1.5rem + 100vw - 100%)))` }}
+    >
+      <Card className="h-full flex flex-col !p-0 animate-scale-up">
         <header className="flex items-center justify-between p-4 border-b border-gray-700 flex-shrink-0">
           <h2 className="text-lg font-semibold text-white flex items-center">
+            {/* FIX: Changed 'class' to 'className' to fix JSX property error. */}
             <ion-icon name="sparkles-outline" className="mr-2 text-blue-400"></ion-icon>
             AI Assistant
           </h2>

@@ -1,9 +1,8 @@
 import React, { useState, useMemo } from 'react';
-// FIX: Add a side-effect import to ensure global JSX type definitions are loaded.
-import {} from '../types';
 import type { ActivityLogEntry } from '../types';
 import { Card } from './common/Card';
 import { Input } from './common/Input';
+import { DatePicker } from './common/DatePicker';
 import { ActivityAction } from '../types';
 
 interface ActivityLogViewProps {
@@ -23,14 +22,24 @@ const formatActivityDetails = (entry: ActivityLogEntry) => {
             return `Updated project "${details.projectName}" status from ${details.from} to ${details.to}`;
         case ActivityAction.PROJECT_DELETED:
             return `Deleted project: ${details.projectName}`;
-        case ActivityAction.INVOICE_CREATED:
-            return `Created invoice from ${details.supplier}`;
-        case ActivityAction.INVOICE_STATUS_CHANGED:
-            return `Updated invoice ${details.invoiceId} from ${details.from} to ${details.to}`;
-        case ActivityAction.INVOICE_DELETED:
-            return `Deleted invoice ${details.invoiceId} from supplier ${details.supplier}`;
          case ActivityAction.USER_REGISTERED:
              return `User registered with role: ${details.registeredAs}`;
+        case ActivityAction.PROJECT_CHANGES_ACKNOWLEDGED:
+            return `Acknowledged changes to project "${details.projectName}" made by ${details.acknowledgedEditor}`;
+        case ActivityAction.INVENTORY_ITEM_CREATED:
+            return `Added new item "${details.itemName}" (Qty: ${details.quantity}) to inventory.`;
+        case ActivityAction.INVENTORY_ITEM_UPDATED:
+            return `Updated item "${details.itemName}": added ${details.quantityAdded} units. New total: ${details.newTotalQuantity}.`;
+        case ActivityAction.INVENTORY_ITEM_STATUS_CHANGED:
+            return `Updated status for item "${details.itemName}" from ${details.from} to ${details.to}.`;
+        case ActivityAction.INVOICE_SUBMITTED:
+            return `Submitted invoice #${details.invoiceNumber} for $${details.amount.toFixed(2)} from ${details.vendor}.`;
+        case ActivityAction.INVOICE_STATUS_CHANGED:
+            return `Updated invoice #${details.invoiceNumber} status from ${details.from} to ${details.to}.`;
+        case ActivityAction.INVOICE_DELETED:
+            return `Deleted invoice #${details.invoiceNumber} from ${details.vendor}.`;
+        case ActivityAction.TIME_LOG_CREATED:
+            return `Logged ${details.hours} hour(s) for project: ${details.projectName}.`;
         default:
             return action;
     }
@@ -47,6 +56,10 @@ export const ActivityLogView: React.FC<ActivityLogViewProps> = ({ activityLog })
   const handleFilterChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     setFilters(prev => ({ ...prev, [e.target.name]: e.target.value }));
   };
+  
+  const handleDateChange = (name: 'startDate' | 'endDate', date: string) => {
+    setFilters(prev => ({...prev, [name]: date}));
+  };
 
   const filteredLog = useMemo(() => {
     return activityLog.filter(entry => {
@@ -57,12 +70,11 @@ export const ActivityLogView: React.FC<ActivityLogViewProps> = ({ activityLog })
         return false;
       }
       const entryDate = new Date(entry.timestamp);
-      if (filters.startDate && entryDate < new Date(filters.startDate)) {
+      if (filters.startDate && entryDate < new Date(`${filters.startDate}T00:00:00`)) {
         return false;
       }
       if (filters.endDate) {
-          const endDate = new Date(filters.endDate);
-          endDate.setHours(23,59,59,999); // Include the whole day
+          const endDate = new Date(`${filters.endDate}T23:59:59`);
           if (entryDate > endDate) {
             return false;
           }
@@ -92,8 +104,8 @@ export const ActivityLogView: React.FC<ActivityLogViewProps> = ({ activityLog })
                     {Object.values(ActivityAction).map(action => <option key={action} value={action}>{action}</option>)}
                 </select>
             </div>
-            <Input label="Start Date" name="startDate" type="date" value={filters.startDate} onChange={handleFilterChange} />
-            <Input label="End Date" name="endDate" type="date" value={filters.endDate} onChange={handleFilterChange} />
+            <DatePicker label="Start Date" value={filters.startDate} onChange={(date) => handleDateChange('startDate', date)} />
+            <DatePicker label="End Date" value={filters.endDate} onChange={(date) => handleDateChange('endDate', date)} min={filters.startDate} />
         </div>
 
         <h2 className="text-xl font-semibold text-white mb-4">Log Entries ({filteredLog.length})</h2>

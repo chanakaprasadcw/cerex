@@ -1,8 +1,6 @@
-
-
-import React from 'react';
 // FIX: Add a side-effect import to ensure global JSX types are loaded.
-import {} from '../../types';
+import '../../types';
+import React from 'react';
 
 export const Spinner: React.FC = () => {
   return (

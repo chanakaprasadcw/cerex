@@ -1,8 +1,9 @@
-import { useState, useCallback, useEffect } from 'react';
-import type { Project, InventoryItem, TeamMember, BomItem, PurchaseRecord, User, ActivityLogEntry } from '../types';
-import { ProjectStatus, InventoryCategory, UserRole, InvoiceStatus, ActivityAction } from '../types';
+import { useState, useCallback, useEffect, useRef } from 'react';
+// FIX: Removed InvoiceItem import
+import type { Project, InventoryItem, TeamMember, BomItem, User, ActivityLogEntry, Notification, StoredFile, CostCenterType, PurchaseRecord, TimeLogEntry } from '../types';
+import { ProjectStatus, UserRole, ActivityAction, InventoryItemStatus, InvoiceStatus, COST_CENTERS } from '../types';
 import { db } from '../services/firebase';
-import { collection, query, onSnapshot, orderBy, addDoc, doc, updateDoc, runTransaction, where, getDocs, deleteDoc, getDoc } from 'firebase/firestore';
+import { collection, query, onSnapshot, orderBy, addDoc, doc, updateDoc, runTransaction, where, getDocs, deleteDoc, getDoc, writeBatch } from 'firebase/firestore';
 import { logActivity } from '../services/activityLogger';
 
 const INITIAL_TEAM_MEMBERS: TeamMember[] = [
@@ -12,22 +13,22 @@ const INITIAL_TEAM_MEMBERS: TeamMember[] = [
   { id: 'team-4', name: 'Chanaka Prasad', email: 'chanaka@example.com', role: 'Electronic Engineer' },
 ];
 
-// Define types for the new invoice submission payload for clarity and type safety.
-type InvoiceItemPayload = {
-  name: string;
-  quantity: number;
-  pricePerUnit: number;
-  category: InventoryCategory;
-  purchaseFor: 'General Inventory' | 'Project' | 'Expense';
-  costCenter: string;
+// FIX: Added missing type export for InvoiceSubmissionData to resolve import error in InvoicesView.
+export type InvoiceSubmissionData = {
+    vendorName: string;
+    invoiceNumber: string;
+    invoiceDate: string;
+    totalAmount: number;
+    costCenterType: CostCenterType;
+    projectId: string;
+    invoiceFile: File;
 };
 
-type InvoiceSubmissionPayload = {
-  invoiceId: string;
-  supplier: string;
-  purchaseDate: string;
-  invoiceFile: File | null;
-  items: InvoiceItemPayload[];
+export type TimeLogData = {
+    projectId: string;
+    date: string;
+    hours: number;
+    note: string;
 };
 
 
@@ -35,11 +36,26 @@ export const useProjectData = (currentUser: User | null) => {
   const [projects, setProjects] = useState<Project[]>([]);
   const [inventory, setInventory] = useState<InventoryItem[]>([]);
   const [teamMembers] = useState<TeamMember[]>(INITIAL_TEAM_MEMBERS);
-  const [purchaseRecords, setPurchaseRecords] = useState<PurchaseRecord[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [activityLog, setActivityLog] = useState<ActivityLogEntry[]>([]);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [purchaseRecords, setPurchaseRecords] = useState<PurchaseRecord[]>([]);
+  const [timeLogs, setTimeLogs] = useState<TimeLogEntry[]>([]);
+  const cleanupPerformed = useRef(false);
 
   useEffect(() => {
+    if (!currentUser) {
+        setProjects([]);
+        setInventory([]);
+        setUsers([]);
+        setActivityLog([]);
+        setNotifications([]);
+        setPurchaseRecords([]);
+        setTimeLogs([]);
+        cleanupPerformed.current = false;
+        return;
+    }
+      
     const qProjects = query(collection(db, "projects"), orderBy("submissionDate", "desc"));
     const unsubscribeProjects = onSnapshot(qProjects, (querySnapshot) => {
       const projectsData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Project));
@@ -53,20 +69,6 @@ export const useProjectData = (currentUser: User | null) => {
       setInventory(inventoryData);
     }, (error) => {
         console.error("Error fetching inventory:", error);
-    });
-
-    const qPurchases = query(collection(db, "purchaseRecords"), orderBy("purchaseDate", "desc"));
-    const unsubscribePurchases = onSnapshot(qPurchases, (querySnapshot) => {
-      const recordsData = querySnapshot.docs.map(doc => {
-        const data = doc.data();
-        return {
-          id: doc.id,
-          ...data,
-        } as PurchaseRecord;
-      });
-      setPurchaseRecords(recordsData);
-    }, (error) => {
-        console.error("Error fetching purchase records:", error);
     });
       
     const unsubscribeUsers = onSnapshot(collection(db, "users"), (querySnapshot) => {
@@ -91,14 +93,98 @@ export const useProjectData = (currentUser: User | null) => {
         console.error("Error fetching activity log:", error);
     });
 
+    const qNotifications = query(
+        collection(db, "notifications"),
+        where("userId", "==", currentUser.uid),
+        orderBy("timestamp", "desc")
+    );
+    const unsubscribeNotifications = onSnapshot(qNotifications, (querySnapshot) => {
+        const notificationsData = querySnapshot.docs.map(doc => {
+            const data = doc.data();
+            return {
+                id: doc.id,
+                ...data,
+                timestamp: data.timestamp, // Assuming timestamp is stored as ISO string
+            } as Notification;
+        });
+        setNotifications(notificationsData);
+    }, (error) => {
+        console.error("Error fetching notifications:", error);
+    });
+    
+    const qInvoices = query(collection(db, "purchaseRecords"), orderBy("submissionDate", "desc"));
+    const unsubscribeInvoices = onSnapshot(qInvoices, (querySnapshot) => {
+        const invoicesData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as PurchaseRecord));
+        setPurchaseRecords(invoicesData);
+    }, (error) => {
+        console.error("Error fetching invoices:", error);
+    });
+
+    const qTimeLogs = query(collection(db, "timeLogs"), orderBy("timestamp", "desc"));
+    const unsubscribeTimeLogs = onSnapshot(qTimeLogs, (querySnapshot) => {
+        const timeLogsData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as TimeLogEntry));
+        setTimeLogs(timeLogsData);
+    }, (error) => {
+        console.error("Error fetching time logs:", error);
+    });
+
     return () => {
       unsubscribeProjects();
       unsubscribeInventory();
-      unsubscribePurchases();
       unsubscribeUsers();
       unsubscribeActivityLog();
+      unsubscribeNotifications();
+      unsubscribeInvoices();
+      unsubscribeTimeLogs();
     };
-  }, []);
+  }, [currentUser]);
+
+  useEffect(() => {
+    const cleanupOldLogs = async () => {
+        if (currentUser && currentUser.role === UserRole.SUPER_ADMIN && !cleanupPerformed.current) {
+            cleanupPerformed.current = true; // Mark as performed for this session
+
+            const oneWeekAgo = new Date();
+            oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+
+            const oldLogsQuery = query(
+                collection(db, 'activityLog'),
+                where('timestamp', '<', oneWeekAgo)
+            );
+
+            try {
+                const querySnapshot = await getDocs(oldLogsQuery);
+                if (!querySnapshot.empty) {
+                    const batch = writeBatch(db);
+                    querySnapshot.forEach(doc => {
+                        batch.delete(doc.ref);
+                    });
+                    await batch.commit();
+                    console.log(`Successfully deleted ${querySnapshot.size} old activity log entries.`);
+                }
+            } catch (error) {
+                console.error("Error cleaning up old activity logs:", error);
+            }
+        }
+    };
+
+    cleanupOldLogs();
+  }, [currentUser]);
+
+
+  const createNotification = async (recipientId: string, message: string, projectId: string) => {
+    try {
+        await addDoc(collection(db, 'notifications'), {
+            userId: recipientId,
+            message,
+            projectId,
+            read: false,
+            timestamp: new Date().toISOString(),
+        });
+    } catch (error) {
+        console.error("Error creating notification:", error);
+    }
+  };
   
   const updateUserRole = useCallback(async (userId: string, newRole: UserRole, actor: User) => {
     const userRef = doc(db, 'users', userId);
@@ -124,44 +210,111 @@ export const useProjectData = (currentUser: User | null) => {
   }, []);
 
   const addProject = useCallback(async (project: Project) => {
-    // FIX: Explicitly create plain objects for all nested array items to prevent circular reference errors when writing to Firestore.
-    const projectData = {
-      name: project.name,
-      costCenter: project.costCenter,
-      details: project.details,
-      bom: project.bom.map(item => ({...item})),
-      timeline: project.timeline.map(item => ({...item})),
-      team: project.team.map(item => ({...item})),
-      approvers: project.approvers.map(item => ({...item})),
-      status: project.status,
-      submittedBy: project.submittedBy,
-      submissionDate: project.submissionDate,
-      checkedBy: project.checkedBy || null,
-      approvedBy: project.approvedBy || null,
-    };
-    const docRef = await addDoc(collection(db, 'projects'), projectData);
-    if (currentUser) {
-        await logActivity(currentUser, ActivityAction.PROJECT_CREATED, { projectId: docRef.id, projectName: project.name });
-    }
-  }, [currentUser]);
+    try {
+        const projectData = {
+          name: project.name,
+          costCenter: project.costCenter,
+          details: project.details,
+          projectDocument: project.projectDocument ? {
+              name: project.projectDocument.name,
+              type: project.projectDocument.type,
+              data: project.projectDocument.data,
+          } : null,
+          bomDocument: project.bomDocument ? {
+              name: project.bomDocument.name,
+              type: project.bomDocument.type,
+              data: project.bomDocument.data,
+          } : null,
+          bom: project.bom.map(item => ({
+              inventoryItemId: item.inventoryItemId,
+              name: item.name,
+              quantityNeeded: item.quantityNeeded,
+              price: item.price,
+              source: item.source,
+          })),
+          timeline: project.timeline.map(item => ({
+              id: item.id,
+              name: item.name,
+              startDate: item.startDate,
+              endDate: item.endDate,
+              completed: item.completed,
+          })),
+          team: project.team.map(item => ({
+              id: item.id,
+              name: item.name,
+              email: item.email,
+              role: item.role,
+          })),
+          approvers: project.approvers.map(item => ({
+              id: item.id,
+              name: item.name,
+              email: item.email,
+              role: item.role,
+          })),
+          status: project.status,
+          submittedBy: project.submittedBy,
+          submissionDate: project.submissionDate,
+        };
 
-  const updateProject = useCallback(async (updatedProject: Project) => {
+        const docRef = await addDoc(collection(db, 'projects'), projectData);
+        if (currentUser) {
+            await logActivity(currentUser, ActivityAction.PROJECT_CREATED, { projectId: docRef.id, projectName: project.name });
+            // Notify checkers
+            const checkers = users.filter(u => u.role === UserRole.CHECKER);
+            for (const checker of checkers) {
+                await createNotification(checker.uid, `New project "${project.name}" submitted for your review.`, docRef.id);
+            }
+        }
+    } catch (error) {
+        console.error("Error adding project to Firestore:", error);
+        throw new Error("Failed to save project to the database. Please check your connection and try again.");
+    }
+  }, [currentUser, users]);
+
+  const updateProject = useCallback(async (updatedProject: Project, user: User) => {
     const { id } = updatedProject;
     if (id) {
-        // FIX: Explicitly create plain objects for all nested array items to prevent circular reference errors when writing to Firestore, especially during edits.
+        const originalProject = projects.find(p => p.id === id);
+        if (!originalProject) {
+            console.error("Original project not found for update");
+            return;
+        }
+
+        const isReviewer = user.role === UserRole.CHECKER || user.role === UserRole.AUTHORIZER;
+        const isEditingSomeoneElsesProject = user.username !== originalProject.submittedBy;
+
+        let newStatus = updatedProject.status;
+        let lastEditor: string | null = null;
+        let lastEditDate: string | null = null;
+
+        if (isReviewer && isEditingSomeoneElsesProject && updatedProject.status !== ProjectStatus.REJECTED) {
+            newStatus = ProjectStatus.AWAITING_ACKNOWLEDGMENT;
+            lastEditor = user.username;
+            lastEditDate = new Date().toISOString();
+
+            const submitter = users.find(u => u.username === originalProject.submittedBy);
+            if (submitter) {
+                await createNotification(submitter.uid, `Project "${updatedProject.name}" was edited by ${user.username} and requires your acknowledgment.`, id);
+            }
+        }
+
         const projectData = {
             name: updatedProject.name,
             costCenter: updatedProject.costCenter,
             details: updatedProject.details,
+            projectDocument: updatedProject.projectDocument || null,
+            bomDocument: updatedProject.bomDocument || null,
             bom: updatedProject.bom.map(item => ({...item})),
             timeline: updatedProject.timeline.map(item => ({...item})),
             team: updatedProject.team.map(item => ({...item})),
             approvers: updatedProject.approvers.map(item => ({...item})),
-            status: updatedProject.status,
+            status: newStatus,
             checkedBy: updatedProject.checkedBy,
             approvedBy: updatedProject.approvedBy,
+            lastEditor,
+            lastEditDate,
         };
-        // Filter out undefined values to avoid errors with Firestore
+        
         const cleanProjectData = Object.fromEntries(Object.entries(projectData).filter(([_, v]) => v !== undefined));
         
         const projectRef = doc(db, 'projects', id);
@@ -170,7 +323,37 @@ export const useProjectData = (currentUser: User | null) => {
             await logActivity(currentUser, ActivityAction.PROJECT_UPDATED, { projectId: id, projectName: updatedProject.name });
         }
     }
-  }, [currentUser]);
+  }, [currentUser, projects, users]);
+  
+  const acknowledgeProjectChanges = useCallback(async (projectId: string, user: User) => {
+    const projectRef = doc(db, 'projects', projectId);
+    const project = projects.find(p => p.id === projectId);
+    if (!project) {
+        console.error("Project not found for acknowledgment");
+        return;
+    }
+
+    const lastEditorUser = users.find(u => u.username === project.lastEditor);
+    let newStatus = ProjectStatus.PENDING_REVIEW;
+    if (lastEditorUser?.role === UserRole.CHECKER) {
+        newStatus = ProjectStatus.PENDING_REVIEW;
+    } else if (lastEditorUser?.role === UserRole.AUTHORIZER) {
+        newStatus = ProjectStatus.PENDING_APPROVAL;
+    }
+
+    const updateData = { 
+        status: newStatus,
+        lastEditor: null,
+        lastEditDate: null,
+    };
+    
+    await updateDoc(projectRef, updateData as any);
+    await logActivity(user, ActivityAction.PROJECT_CHANGES_ACKNOWLEDGED, {
+        projectId,
+        projectName: project.name,
+        acknowledgedEditor: project.lastEditor
+    });
+  }, [projects, users]);
 
   const updateProjectStatus = useCallback(async (projectId: string, status: ProjectStatus, user?: User) => {
     const projectRef = doc(db, 'projects', projectId);
@@ -190,8 +373,21 @@ export const useProjectData = (currentUser: User | null) => {
             from: project.status,
             to: status
         });
+
+        // Create notifications for status changes
+        if (status === ProjectStatus.PENDING_APPROVAL) {
+            const authorizers = users.filter(u => u.role === UserRole.AUTHORIZER);
+            for (const authorizer of authorizers) {
+                await createNotification(authorizer.uid, `Project "${project.name}" is ready for final approval.`, projectId);
+            }
+        } else if (status === ProjectStatus.APPROVED || status === ProjectStatus.REJECTED) {
+            const submitter = users.find(u => u.username === project.submittedBy);
+            if (submitter) {
+                await createNotification(submitter.uid, `Your project "${project.name}" has been ${status.toLowerCase()}.`, projectId);
+            }
+        }
     }
-  }, [projects]);
+  }, [projects, users]);
 
   const deleteProject = useCallback(async (projectId: string) => {
     try {
@@ -206,191 +402,91 @@ export const useProjectData = (currentUser: User | null) => {
     }
   }, [projects, currentUser]);
 
-  const submitInvoice = useCallback(async (payload: InvoiceSubmissionPayload, user: User) => {
-    const { invoiceId, supplier, items } = payload;
-    if (!items || items.length === 0) {
-      console.error("Cannot submit an empty invoice.");
-      return;
-    }
-
-    const isAuthorizer = user.role === UserRole.AUTHORIZER;
-    const initialStatus = isAuthorizer ? InvoiceStatus.APPROVED : InvoiceStatus.PENDING_REVIEW;
-
+  const addInventoryItem = useCallback(async (itemData: { name: string; quantity: number; price: number; category: string; }, user: User) => {
     try {
-      // Pre-fetch all necessary inventory documents before starting the transaction,
-      // as queries are not allowed inside Firestore transactions.
-      const itemProcessingData = [];
-      for (const item of items) {
-        let inventoryItemRef = null;
-        if (item.purchaseFor !== 'Expense') {
-          const inventoryQuery = query(
+        // Always create a new item for review.
+        // The merging logic is handled in `updateInventoryItemStatus` upon final approval.
+        const newItem: Omit<InventoryItem, 'id'> = {
+            name: itemData.name,
+            quantity: itemData.quantity,
+            price: itemData.price,
+            category: itemData.category,
+            status: InventoryItemStatus.PENDING_REVIEW, // Set initial status to Pending Review
+            submittedBy: user.username,
+            submissionDate: new Date().toISOString(),
+        };
+        const docRef = await addDoc(collection(db, 'inventory'), newItem);
+        
+        await logActivity(user, ActivityAction.INVENTORY_ITEM_CREATED, { 
+            itemId: docRef.id,
+            itemName: itemData.name, 
+            quantity: itemData.quantity,
+            category: itemData.category,
+            details: 'Item submitted for review.',
+        });
+    } catch (e) {
+        console.error("Failed to add inventory item for review:", e);
+        throw e;
+    }
+  }, []);
+
+  const updateInventoryItemStatus = useCallback(async (itemId: string, newStatus: InventoryItemStatus, user: User) => {
+    const itemRef = doc(db, 'inventory', itemId);
+    
+    const itemToUpdateSnapshot = await getDoc(itemRef);
+    if (!itemToUpdateSnapshot.exists()) throw new Error("Item not found.");
+    const itemToUpdateData = itemToUpdateSnapshot.data() as InventoryItem;
+    
+    let existingItemRef: any = null;
+    let existingItemData: InventoryItem | null = null;
+    if (newStatus === InventoryItemStatus.APPROVED && user.role === UserRole.AUTHORIZER) {
+        const inventoryQuery = query(
             collection(db, 'inventory'),
-            where('name', '==', item.name),
-            where('category', '==', item.category)
-          );
-          const snapshot = await getDocs(inventoryQuery);
-          if (!snapshot.empty) {
-            inventoryItemRef = snapshot.docs[0].ref;
-          }
+            where('name', '==', itemToUpdateData.name),
+            where('category', '==', itemToUpdateData.category),
+            where('status', '==', InventoryItemStatus.APPROVED)
+        );
+        const existingItemsSnapshot = await getDocs(inventoryQuery);
+        if (!existingItemsSnapshot.empty) {
+            const doc = existingItemsSnapshot.docs[0];
+            existingItemRef = doc.ref;
+            existingItemData = doc.data() as InventoryItem;
         }
-        itemProcessingData.push({ item, inventoryItemRef });
-      }
-      
-      await runTransaction(db, async (transaction) => {
-        for (const { item, inventoryItemRef } of itemProcessingData) {
-          let finalInventoryItemId = null;
-
-          // Handle inventory updates
-          if (item.purchaseFor !== 'Expense') {
-            if (inventoryItemRef) { // Item exists, update it
-              finalInventoryItemId = inventoryItemRef.id;
-              const invDoc = await transaction.get(inventoryItemRef);
-              if (!invDoc.exists()) throw new Error(`Inventory item ${item.name} not found in transaction.`);
-              
-              if (isAuthorizer) {
-                const newQuantity = invDoc.data().quantity + item.quantity;
-                transaction.update(inventoryItemRef, { quantity: newQuantity, price: item.pricePerUnit });
-              } else {
-                const newPendingQuantity = invDoc.data().pendingQuantity + item.quantity;
-                transaction.update(inventoryItemRef, { pendingQuantity: newPendingQuantity });
-              }
-            } else { // Item is new, create it
-              const newInvRef = doc(collection(db, 'inventory'));
-              finalInventoryItemId = newInvRef.id;
-              const newInventoryItem: Omit<InventoryItem, 'id'> = {
-                name: item.name,
-                quantity: isAuthorizer ? item.quantity : 0,
-                pendingQuantity: isAuthorizer ? 0 : item.quantity,
-                price: item.pricePerUnit,
-                category: item.category,
-              };
-              transaction.set(newInvRef, newInventoryItem);
-            }
-          }
-
-          // Create the purchase record for the item
-          const newRecordRef = doc(collection(db, 'purchaseRecords'));
-          const newRecordData: Partial<PurchaseRecord> = {
-            invoiceId: payload.invoiceId,
-            purchaseDate: payload.purchaseDate,
-            supplier: payload.supplier,
-            itemName: item.name,
-            inventoryItemId: finalInventoryItemId ?? '',
-            quantity: item.quantity,
-            pricePerUnit: item.pricePerUnit,
-            totalCost: item.quantity * item.pricePerUnit,
-            purchaseFor: item.purchaseFor,
-            costCenter: item.costCenter,
-            status: initialStatus,
-          };
-
-          if (isAuthorizer) {
-            newRecordData.checkedBy = user.username;
-            newRecordData.approvedBy = user.username;
-          }
-          transaction.set(newRecordRef, newRecordData);
-        }
-      });
-
-      await logActivity(user, ActivityAction.INVOICE_CREATED, { invoiceId, supplier });
-    } catch (e) {
-      console.error("Failed to submit invoice:", e);
-      throw e; // Re-throw to be caught by the UI
     }
-  }, []);
-  
-  const updateInvoiceStatus = useCallback(async (invoiceId: string, status: InvoiceStatus, user: User) => {
-    const recordsQuery = query(collection(db, 'purchaseRecords'), where('invoiceId', '==', invoiceId));
-    const recordsSnapshot = await getDocs(recordsQuery);
-    const recordsToUpdate = recordsSnapshot.docs;
-    const firstRecord = recordsToUpdate.length > 0 ? recordsToUpdate[0].data() as PurchaseRecord : null;
-
-    if (!firstRecord) return;
 
     try {
         await runTransaction(db, async (transaction) => {
-            for (const recordDoc of recordsToUpdate) {
-                const updateData: { status: InvoiceStatus, checkedBy?: string, approvedBy?: string } = { status };
-                
-                if (status === InvoiceStatus.PENDING_APPROVAL && user.role === UserRole.CHECKER) {
-                    updateData.checkedBy = user.username;
+            if (newStatus === InventoryItemStatus.APPROVED && user.role === UserRole.AUTHORIZER) {
+                if (existingItemRef && existingItemData) {
+                    transaction.update(existingItemRef, {
+                        quantity: existingItemData.quantity + itemToUpdateData.quantity,
+                        price: itemToUpdateData.price
+                    });
+                    transaction.delete(itemRef);
+                } else {
+                    transaction.update(itemRef, { status: newStatus, approvedBy: user.username });
                 }
-                
-                if (status === InvoiceStatus.APPROVED && user.role === UserRole.AUTHORIZER) {
-                    // FIX: Ensure the approver's name is recorded.
-                    updateData.approvedBy = user.username;
-                    const rec = recordDoc.data() as PurchaseRecord;
-
-                    // FIX: Correctly move items from pending to available inventory.
-                    if (rec.purchaseFor !== 'Expense' && rec.inventoryItemId) {
-                        const itemRef = doc(db, 'inventory', rec.inventoryItemId);
-                        const itemDoc = await transaction.get(itemRef);
-                        if (itemDoc.exists()) {
-                            const itemData = itemDoc.data() as InventoryItem;
-                            const newPendingQuantity = itemData.pendingQuantity - rec.quantity;
-                            transaction.update(itemRef, {
-                                quantity: itemData.quantity + rec.quantity,
-                                // FIX: Add a safeguard against negative pending quantities.
-                                pendingQuantity: newPendingQuantity < 0 ? 0 : newPendingQuantity,
-                                price: rec.pricePerUnit,
-                            });
-                        }
-                    }
-                }
-                transaction.update(recordDoc.ref, updateData);
+            } else {
+                const updateData: Partial<InventoryItem> = { status: newStatus };
+                if (user.role === UserRole.CHECKER) updateData.checkedBy = user.username;
+                if (user.role === UserRole.AUTHORIZER) updateData.approvedBy = user.username;
+                transaction.update(itemRef, updateData);
             }
         });
-        await logActivity(user, ActivityAction.INVOICE_STATUS_CHANGED, {
-            invoiceId,
-            supplier: firstRecord.supplier,
-            from: firstRecord.status,
-            to: status
+        
+        await logActivity(user, ActivityAction.INVENTORY_ITEM_STATUS_CHANGED, {
+            itemId: itemId,
+            itemName: itemToUpdateData.name,
+            from: itemToUpdateData.status,
+            to: newStatus,
+            details: existingItemRef ? 'Merged into existing stock.' : ''
         });
+
     } catch (e) {
-        console.error("Invoice status update transaction failed: ", e);
+        console.error("Inventory item status update transaction failed: ", e);
+        throw e;
     }
   }, []);
-
-  const deleteInvoice = useCallback(async (invoiceId: string) => {
-    const recordsQuery = query(collection(db, 'purchaseRecords'), where('invoiceId', '==', invoiceId));
-    const recordsSnapshot = await getDocs(recordsQuery);
-    
-    if (recordsSnapshot.empty || !currentUser) {
-        console.error("No invoice records found to delete or user not logged in.");
-        return;
-    }
-    
-    const firstRecord = recordsSnapshot.docs[0].data() as PurchaseRecord;
-    
-    try {
-        await runTransaction(db, async (transaction) => {
-            // Use the snapshot fetched outside the transaction
-            for (const recordDoc of recordsSnapshot.docs) {
-                const record = recordDoc.data() as PurchaseRecord;
-                if (record.purchaseFor !== 'Expense' && record.inventoryItemId) {
-                    const itemRef = doc(db, 'inventory', record.inventoryItemId);
-                    const itemDoc = await transaction.get(itemRef);
-                    if (itemDoc.exists()) {
-                        const itemData = itemDoc.data() as InventoryItem;
-                        if (record.status === InvoiceStatus.APPROVED) {
-                            const newQuantity = itemData.quantity - record.quantity;
-                            transaction.update(itemRef, { quantity: newQuantity < 0 ? 0 : newQuantity });
-                        } else {
-                            const newPendingQuantity = itemData.pendingQuantity - record.quantity;
-                            transaction.update(itemRef, { pendingQuantity: newPendingQuantity < 0 ? 0 : newPendingQuantity });
-                        }
-                    }
-                }
-                // Delete the purchase record itself
-                transaction.delete(recordDoc.ref);
-            }
-        });
-        await logActivity(currentUser, ActivityAction.INVOICE_DELETED, { invoiceId, supplier: firstRecord.supplier });
-    } catch (e) {
-        console.error("Invoice deletion transaction failed: ", e);
-    }
-  }, [currentUser]);
-
 
   const deductInventory = useCallback(async (bom: BomItem[]) => {
     try {
@@ -414,22 +510,153 @@ export const useProjectData = (currentUser: User | null) => {
       console.error("Inventory deduction transaction failed: ", e);
     }
   }, []);
+    
+    const markNotificationAsRead = useCallback(async (notificationId: string) => {
+        const notificationRef = doc(db, 'notifications', notificationId);
+        await updateDoc(notificationRef, { read: true });
+    }, []);
+
+    const markAllNotificationsAsRead = useCallback(async () => {
+        if (!currentUser) return;
+        const unreadNotifs = notifications.filter(n => !n.read);
+        for (const notif of unreadNotifs) {
+            const notificationRef = doc(db, 'notifications', notif.id);
+            await updateDoc(notificationRef, { read: true });
+        }
+    }, [currentUser, notifications]);
+
+  const fileToBase64 = (file: File): Promise<string> => {
+      return new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.readAsDataURL(file);
+          reader.onload = () => resolve((reader.result as string).split(',')[1]);
+          reader.onerror = error => reject(error);
+      });
+  };
+
+  const submitInvoice = useCallback(async (payload: InvoiceSubmissionData, user: User) => {
+      const { vendorName, invoiceNumber, invoiceDate, totalAmount, costCenterType, projectId, invoiceFile } = payload;
+      
+      const fileData = await fileToBase64(invoiceFile);
+      const storedFile: StoredFile = {
+          name: invoiceFile.name,
+          type: invoiceFile.type,
+          data: fileData,
+      };
+
+      const newRecord: Omit<PurchaseRecord, 'id'> = {
+          vendorName,
+          invoiceNumber,
+          invoiceDate,
+          totalAmount,
+          costCenter: COST_CENTERS[costCenterType],
+          status: InvoiceStatus.PENDING_REVIEW,
+          submittedBy: user.username,
+          submissionDate: new Date().toISOString(),
+          invoiceFile: storedFile,
+      };
+
+      if (costCenterType === 'Customer Project Costing' && projectId) {
+          const project = projects.find(p => p.id === projectId);
+          if (project) {
+              newRecord.projectName = project.name;
+          }
+      }
+
+      const docRef = await addDoc(collection(db, 'purchaseRecords'), newRecord);
+      await logActivity(user, ActivityAction.INVOICE_SUBMITTED, {
+          invoiceId: docRef.id,
+          invoiceNumber,
+          vendor: vendorName,
+          amount: totalAmount,
+      });
+
+  }, [projects]);
+  
+  const updateInvoiceStatus = useCallback(async (invoiceId: string, status: InvoiceStatus, user: User) => {
+      const invoiceRef = doc(db, 'purchaseRecords', invoiceId);
+      const invoice = purchaseRecords.find(pr => pr.id === invoiceId);
+      if (!invoice) return;
+
+      const updateData: Partial<PurchaseRecord> = { status };
+
+      if (status === InvoiceStatus.PENDING_APPROVAL) {
+          updateData.checkedBy = user.username;
+      } else if (status === InvoiceStatus.APPROVED) {
+          updateData.approvedBy = user.username;
+      }
+      
+      await updateDoc(invoiceRef, updateData);
+      await logActivity(user, ActivityAction.INVOICE_STATUS_CHANGED, {
+          invoiceId,
+          invoiceNumber: invoice.invoiceNumber,
+          from: invoice.status,
+          to: status
+      });
+  }, [purchaseRecords]);
+
+  const deleteInvoice = useCallback(async (invoiceId: string) => {
+    if (!currentUser) return;
+    const invoiceToDelete = purchaseRecords.find(pr => pr.id === invoiceId);
+    if (!invoiceToDelete) return;
+    
+    const invoiceRef = doc(db, 'purchaseRecords', invoiceId);
+    await deleteDoc(invoiceRef);
+    await logActivity(currentUser, ActivityAction.INVOICE_DELETED, {
+        invoiceId,
+        invoiceNumber: invoiceToDelete.invoiceNumber,
+        vendor: invoiceToDelete.vendorName,
+    });
+  }, [purchaseRecords, currentUser]);
+
+  const addTimeLog = useCallback(async (logData: TimeLogData, user: User) => {
+      const project = projects.find(p => p.id === logData.projectId);
+      if (!project) {
+          throw new Error("Project not found.");
+      }
+
+      const newLog: Omit<TimeLogEntry, 'id'> = {
+          userId: user.uid,
+          username: user.username,
+          projectId: logData.projectId,
+          projectName: project.name,
+          date: logData.date,
+          hours: logData.hours,
+          note: logData.note,
+          timestamp: new Date().toISOString(),
+      };
+
+      const docRef = await addDoc(collection(db, 'timeLogs'), newLog);
+      await logActivity(user, ActivityAction.TIME_LOG_CREATED, {
+          timeLogId: docRef.id,
+          projectName: project.name,
+          hours: logData.hours,
+      });
+  }, [projects]);
 
   return {
     projects,
     inventory,
     teamMembers,
-    purchaseRecords,
     users,
     activityLog,
+    notifications,
+    purchaseRecords,
+    timeLogs,
     addProject,
     updateProject,
+    acknowledgeProjectChanges,
     updateProjectStatus,
-    submitInvoice,
-    updateInvoiceStatus,
     deductInventory,
     deleteProject,
-    deleteInvoice,
     updateUserRole,
+    addInventoryItem,
+    updateInventoryItemStatus,
+    markNotificationAsRead,
+    markAllNotificationsAsRead,
+    submitInvoice,
+    updateInvoiceStatus,
+    deleteInvoice,
+    addTimeLog,
   };
 };

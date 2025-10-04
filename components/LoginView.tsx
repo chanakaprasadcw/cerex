@@ -1,6 +1,6 @@
+// FIX: Import types for side effects to augment JSX before React is imported. This ensures custom element types like 'ion-icon' are globally available.
+import '../types';
 import React, { useState } from 'react';
-// FIX: Add side-effect import to load global JSX type definitions.
-import {} from '../types';
 import { UserRole } from '../types';
 import { Card } from './common/Card';
 import { Button } from './common/Button';
@@ -59,12 +59,12 @@ export const LoginView: React.FC<LoginViewProps> = ({ onSignIn, onSignUp, onRese
       {showForgotPassword && <ForgotPasswordModal onClose={() => setShowForgotPassword(false)} onReset={onResetPassword} />}
       <div className="min-h-screen bg-gray-900 text-gray-100 flex items-center justify-center p-4"
         style={{
-          backgroundImage: 'url(\'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGRlZnM+PHBhdHRlcm4gaWQ9ImdyaWQiIHdpZHRoPSI0MCIgaGVpZ2h0PSI0MCIgcGF0dGVyblVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+PHBhdGggZD0iTSAwIDEwIEwgNDAgMTAgTSAxMCAwIEwgMTAgNDAgTSAwIDIwIEwgNDAgMjAgTSAyMCAwIEwgMjAgNDAgTSAwIDMwIEwgNDAgMzAgTSAzMCAwIEwgMzAgNDAiIGZpbGw9Im5vbmUiIHN0cm9rZT0iIzFmMjkzNyIgc3Ryb2tlLXdpZHRoPSIxIi8+PHBhdGggZD0iTSAwIDAgTCA0MCAwIEwgNDAgNDAgTCAwIDQwIFoiIGZpbGw9Im5vbmUiIHN0cm9rZT0iIzM3NDE1MSIgc3Ryb2tlLXdpZHRoPSIxIi8+PC9wYXR0ZXJuPjwvZGVmcz48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZGh0PSIxMDAlIiBmaWxsPSJ1cmwoI2dyaWQpIi8+PC9zdmc+\')',
-          backgroundRepeat: 'repeat',
+          backgroundImage: 'radial-gradient(circle at top left, rgba(59, 130, 246, 0.15), transparent 30%), radial-gradient(circle at bottom right, rgba(37, 99, 235, 0.1), transparent 40%)',
         }}
       >
         <div className="w-full max-w-sm">
           <div className="flex justify-center items-center space-x-3 mb-8">
+            {/* FIX: Changed 'class' to 'className' to fix JSX property error. */}
             <ion-icon name="git-network-outline" className="text-5xl text-blue-400"></ion-icon>
             <h1 className="text-4xl font-bold text-white">ProjectFlow</h1>
           </div>

@@ -1,20 +1,20 @@
-
-
-import React from 'react';
 // FIX: Add a side-effect import to ensure global JSX types are loaded.
-import {} from '../../types';
+import '../../types';
+import React from 'react';
 
 interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
-  label: string;
+  label?: string;
   name?: string;
 }
 
 export const Input: React.FC<InputProps> = ({ label, name, className = '', ...props }) => {
   return (
     <div className="w-full">
-      <label htmlFor={name} className="block text-sm font-medium text-gray-300 mb-2">
-        {label}
-      </label>
+      {label && (
+        <label htmlFor={name} className="block text-sm font-medium text-gray-300 mb-2">
+          {label}
+        </label>
+      )}
       <input
         id={name}
         name={name}

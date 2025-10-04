@@ -1,8 +1,6 @@
-
-
+// FIX: Import types for side effects to augment JSX before React is imported. This ensures custom element types like 'ion-icon' are globally available.
+import '../types';
 import React from 'react';
-// FIX: Add a side-effect import to ensure global JSX type definitions are loaded.
-import {} from '../types';
 import type { Project, User } from '../types';
 import { ProjectStatus, UserRole } from '../types';
 import { Button } from './common/Button';
@@ -12,7 +10,7 @@ interface ProjectListProps {
   onViewProject: (projectId: string) => void;
   onEditProject: (projectId: string) => void;
   onCloneProject: (projectId: string) => void;
-  onDeleteProject: (projectId: string) => void;
+  onDeleteProject: (project: Project) => void;
   currentUser: User;
 }
 
@@ -40,6 +38,9 @@ export const ProjectList: React.FC<ProjectListProps> = ({ projects, onViewProjec
   }
   
   const canDelete = (project: Project, user: User): boolean => {
+    if (user.role === UserRole.SUPER_ADMIN) {
+      return true;
+    }
     if (user.role === UserRole.CHECKER && project.status === ProjectStatus.PENDING_REVIEW) {
         return true;
     }
@@ -64,7 +65,7 @@ export const ProjectList: React.FC<ProjectListProps> = ({ projects, onViewProjec
         </thead>
         <tbody>
           {projects.map(project => (
-            <tr key={project.id} className="bg-gray-800 border-b border-gray-700 hover:bg-gray-700/50">
+            <tr key={project.id} className="bg-gray-800 border-b border-gray-700 hover:bg-gray-750">
               <th scope="row" className="px-6 py-4 font-medium text-white whitespace-nowrap">{project.name}</th>
               <td className="px-6 py-4">{project.costCenter}</td>
               <td className="px-6 py-4">
@@ -78,19 +79,19 @@ export const ProjectList: React.FC<ProjectListProps> = ({ projects, onViewProjec
                 <Button onClick={() => onViewProject(project.id)} variant="secondary" size="sm">
                   View
                 </Button>
-                <Button onClick={() => onEditProject(project.id)} variant="secondary" size="sm">
-                  Edit
-                </Button>
-                <Button onClick={() => onCloneProject(project.id)} variant="secondary" size="sm">
-                  Clone
-                </Button>
+                {project.status !== ProjectStatus.REJECTED && (
+                  <>
+                    <Button onClick={() => onEditProject(project.id)} variant="secondary" size="sm">
+                      Edit
+                    </Button>
+                    <Button onClick={() => onCloneProject(project.id)} variant="secondary" size="sm">
+                      Clone
+                    </Button>
+                  </>
+                )}
                 {canDelete(project, currentUser) && (
                     <Button 
-                        onClick={() => {
-                            if (window.confirm(`Are you sure you want to delete "${project.name}"? This action cannot be undone.`)) {
-                                onDeleteProject(project.id);
-                            }
-                        }}
+                        onClick={() => onDeleteProject(project)}
                         variant="danger-outline" 
                         size="sm"
                     >

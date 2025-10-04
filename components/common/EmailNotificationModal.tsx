@@ -1,5 +1,6 @@
+// FIX: Import types for side effects to augment JSX before React is imported. This ensures custom element types like 'ion-icon' are globally available.
+import '../../types';
 import React from 'react';
-import {} from '../../types';
 import type { Project } from '../../types';
 import { Button } from './Button';
 import { Card } from './Card';
@@ -37,6 +38,7 @@ Please review the project details in the ProjectFlow application.`.trim();
       <Card className="w-full max-w-2xl">
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-xl font-bold text-white flex items-center">
+            {/* FIX: Changed 'class' to 'className' to fix JSX property error. */}
             <ion-icon name="mail-outline" className="mr-3 text-2xl text-blue-400"></ion-icon>
             Simulated Email Notification
           </h2>

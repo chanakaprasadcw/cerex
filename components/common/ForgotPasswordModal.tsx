@@ -1,10 +1,10 @@
+// FIX: Import types for side effects to augment JSX before React is imported. This ensures custom element types like 'ion-icon' are globally available.
+import '../../types';
 import React, { useState } from 'react';
 import { Card } from './Card';
 import { Input } from './Input';
 import { Button } from './Button';
 import { Spinner } from './Spinner';
-// FIX: Changed to a value import to ensure global type declarations from types.ts are loaded.
-import {} from '../../types';
 
 interface ForgotPasswordModalProps {
   onClose: () => void;
@@ -40,6 +40,7 @@ export const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({ onClos
 
         {!isSubmitted ? (
           <form onSubmit={handleSubmit} className="p-4 pt-0 space-y-6 text-center">
+            {/* FIX: Changed 'class' to 'className' to fix JSX property error. */}
             <ion-icon name="mail-open-outline" className="text-5xl text-blue-400 mx-auto"></ion-icon>
             <h2 className="text-xl font-bold text-white">Forgot Password?</h2>
             <p className="text-gray-400">
@@ -60,6 +61,7 @@ export const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({ onClos
           </form>
         ) : (
           <div className="p-4 pt-0 space-y-6 text-center">
+             {/* FIX: Changed 'class' to 'className' to fix JSX property error. */}
              <ion-icon name="checkmark-circle-outline" className="text-5xl text-green-400 mx-auto"></ion-icon>
             <h2 className="text-xl font-bold text-white">Request Sent</h2>
             <p className="text-gray-300">

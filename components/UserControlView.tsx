@@ -1,11 +1,11 @@
+// FIX: Import types for side effects to augment JSX before React is imported. This ensures custom element types like 'ion-icon' are globally available.
+import '../types';
 import React, { useState, useMemo, useEffect } from 'react';
-// FIX: Add side-effect import to load global JSX type definitions.
-import {} from '../types';
 import type { User, ActivityLogEntry } from '../types';
 import { Card } from './common/Card';
 import { Input } from './common/Input';
 import { Button } from './common/Button';
-import { UserRole } from '../types';
+import { UserRole, ActivityAction } from '../types';
 
 interface UserControlViewProps {
   users: User[];
@@ -19,18 +19,16 @@ type SortableUserKeys = keyof User;
 const formatActivityDetails = (entry: ActivityLogEntry) => {
     const { action, details } = entry;
     switch (action) {
-        case 'User Role Changed':
+        case ActivityAction.USER_ROLE_CHANGED:
             return `Changed role for ${details.targetUser} from ${details.from} to ${details.to}`;
-        case 'Project Created':
+        case ActivityAction.PROJECT_CREATED:
             return `Created project: ${details.projectName}`;
-        case 'Project Status Changed':
+        case ActivityAction.PROJECT_STATUS_CHANGED:
             return `Updated project "${details.projectName}" status from ${details.from} to ${details.to}`;
-        case 'Invoice Status Changed':
-            return `Updated invoice ${details.invoiceId} from ${details.from} to ${details.to}`;
-        case 'Invoice Deleted':
-            return `Deleted invoice ${details.invoiceId} from supplier ${details.supplier}`;
-        case 'User Registered':
+        case ActivityAction.USER_REGISTERED:
              return `User registered with role: ${details.registeredAs}`;
+        case ActivityAction.PROJECT_CHANGES_ACKNOWLEDGED:
+            return `Acknowledged changes to project "${details.projectName}" made by ${details.acknowledgedEditor}`;
         default:
             return action;
     }
@@ -67,8 +65,9 @@ export const UserControlView: React.FC<UserControlViewProps> = ({ users, current
       );
     }
     filtered.sort((a, b) => {
-      if (a[sortConfig.key] < b[sortConfig.key]) return sortConfig.direction === 'asc' ? -1 : 1;
-      if (a[sortConfig.key] > b[sortConfig.key]) return sortConfig.direction === 'asc' ? 1 : -1;
+      // FIX: Add explicit string casting to resolve TypeScript inference error.
+      if ((a[sortConfig.key] as string) < (b[sortConfig.key] as string)) return sortConfig.direction === 'asc' ? -1 : 1;
+      if ((a[sortConfig.key] as string) > (b[sortConfig.key] as string)) return sortConfig.direction === 'asc' ? 1 : -1;
       return 0;
     });
     return filtered;
@@ -86,8 +85,10 @@ export const UserControlView: React.FC<UserControlViewProps> = ({ users, current
     <button onClick={() => requestSort(sortKey)} className="flex items-center uppercase text-xs text-gray-400 font-medium group focus:outline-none">
       <span className="group-hover:text-white transition-colors">{children}</span>
       {sortConfig.key === sortKey ? (
+        // FIX: Changed 'class' to 'className' to fix JSX property error.
         <ion-icon name={sortConfig.direction === 'asc' ? 'arrow-up-outline' : 'arrow-down-outline'} className="ml-1.5"></ion-icon>
       ) : (
+        // FIX: Changed 'class' to 'className' to fix JSX property error.
         <ion-icon name="remove-outline" className="ml-1.5 text-transparent group-hover:text-gray-500"></ion-icon>
       )}
     </button>
@@ -102,11 +103,11 @@ export const UserControlView: React.FC<UserControlViewProps> = ({ users, current
   return (
     <div className="space-y-8">
       <h1 className="text-3xl font-bold tracking-tight text-white">User Control Panel</h1>
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
-        <div className="lg:col-span-1 space-y-4">
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-8 items-start">
+        <div className="lg:col-span-2 space-y-4">
           <Card>
             <h2 className="text-xl font-semibold text-white mb-4">Registered Users</h2>
-            <Input label="Search Users" name="search" placeholder="Filter by name or email..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+            <Input label="" name="search" placeholder="Filter by name or email..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
           </Card>
           <Card>
              <div className="flex justify-between p-2">
@@ -131,7 +132,7 @@ export const UserControlView: React.FC<UserControlViewProps> = ({ users, current
           </Card>
         </div>
 
-        <div className="lg:col-span-2">
+        <div className="lg:col-span-3">
           {selectedUser ? (
             <Card>
               <h2 className="text-2xl font-bold text-white mb-2">{selectedUser.username}</h2>
@@ -169,6 +170,7 @@ export const UserControlView: React.FC<UserControlViewProps> = ({ users, current
                         {userActivity.map(entry => (
                              <div key={entry.id} className="flex items-start space-x-4 p-3 bg-gray-800/50 rounded-lg">
                                 <div className="flex-shrink-0 pt-1">
+                                    {/* FIX: Changed 'class' to 'className' to fix JSX property error. */}
                                     <ion-icon name="time-outline" className="text-lg text-gray-500"></ion-icon>
                                 </div>
                                 <div className="flex-1">
@@ -180,6 +182,7 @@ export const UserControlView: React.FC<UserControlViewProps> = ({ users, current
                     </div>
                 ) : (
                     <div className="text-center py-10 text-gray-500">
+                        {/* FIX: Changed 'class' to 'className' to fix JSX property error. */}
                         <ion-icon name="file-tray-outline" className="text-4xl mb-2"></ion-icon>
                         <p>No activity recorded for this user.</p>
                     </div>
@@ -189,6 +192,7 @@ export const UserControlView: React.FC<UserControlViewProps> = ({ users, current
           ) : (
             <Card>
               <div className="text-center py-20 text-gray-500">
+                {/* FIX: Changed 'class' to 'className' to fix JSX property error. */}
                 <ion-icon name="people-circle-outline" className="text-6xl mb-4"></ion-icon>
                 <h2 className="text-xl font-semibold">Select a User</h2>
                 <p>Choose a user from the list to view their activity history and manage their role.</p>
